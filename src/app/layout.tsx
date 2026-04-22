@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Shorts To YouTube",
+  title: "YouTube Automation Studio",
   description: "Download a YouTube Short or Instagram Reel and upload it to your YouTube channel.",
 };
 

@@ -5,16 +5,15 @@ import Link from "next/link";
 export default function HomePage() {
   return (
     <main className="page-shell">
-      <section className="hero-card" style={{ maxWidth: '700px', textAlign: 'center' }}>
+      <section className="hero-card" style={{ width: 'min(860px, 100%)', textAlign: 'center' }}>
         <div style={{ marginBottom: '24px' }}>
-          <h1 style={{ fontSize: '2.4rem', marginBottom: '12px' }}>YouTube Automation Studio</h1>
           <p style={{ color: 'var(--muted)', fontSize: '1.1rem', lineHeight: '1.6' }}>
             The all-in-one professional toolkit for creators. Automate your YouTube workflow with AI-powered tools for content generation and seamless publishing.
           </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '32px' }}>
-          <Link href="/upload-video-by-link" style={{ textDecoration: 'none' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '32px' }}>
+          <Link href="/upload-video-by-link" style={{ textDecoration: 'none', width: '100%', maxWidth: '400px' }}>
             <div style={{
               padding: '24px',
               border: '1px solid var(--line)',
@@ -24,28 +23,10 @@ export default function HomePage() {
               transition: 'transform 0.2s, background 0.2s',
               cursor: 'pointer'
             }}
-            className="hover-card">
-              <h3 style={{ margin: '0 0 8px', color: 'var(--accent)' }}>🚀 Quick Upload</h3>
+              className="hover-card">
+              <h3 style={{ margin: '0 0 8px', color: 'var(--accent)' }}>🚀 Upload Video By Link</h3>
               <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--muted)' }}>
                 Download from YouTube/Instagram and upload directly with AI optimization.
-              </p>
-            </div>
-          </Link>
-
-          <Link href="/ai-studio" style={{ textDecoration: 'none' }}>
-            <div style={{
-              padding: '24px',
-              border: '1px solid var(--line)',
-              borderRadius: '16px',
-              background: 'rgba(255,255,255,0.5)',
-              height: '100%',
-              transition: 'transform 0.2s, background 0.2s',
-              cursor: 'pointer'
-            }}
-            className="hover-card">
-              <h3 style={{ margin: '0 0 8px', color: 'var(--accent)' }}>✨ AI Studio</h3>
-              <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--muted)' }}>
-                Generate viral titles, descriptions, and ultra-realistic images for your content.
               </p>
             </div>
           </Link>

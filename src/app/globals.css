@@ -41,6 +41,7 @@ a {
   position: relative;
   z-index: 50;
   width: min(860px, 100%);
+  max-width: 860px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -48,7 +49,7 @@ a {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 12px;
-  margin-bottom: 16px;
+  margin: 0 auto 16px;
   backdrop-filter: blur(10px);
 }
 
@@ -282,6 +283,8 @@ a {
 
 .hero-card {
   width: min(860px, 100%);
+  max-width: 860px;
+  margin: 0 auto;
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 20px;
