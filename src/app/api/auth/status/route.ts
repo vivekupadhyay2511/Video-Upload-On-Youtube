@@ -1,10 +1,11 @@
 import { google } from "googleapis";
+import { getRefreshToken } from "@/lib/token-storage";
 
 export async function GET() {
   const clientId = process.env.YOUTUBE_CLIENT_ID;
   const clientSecret = process.env.YOUTUBE_CLIENT_SECRET;
   const redirectUri = process.env.YOUTUBE_REDIRECT_URI;
-  const refreshToken = process.env.YOUTUBE_REFRESH_TOKEN;
+  const refreshToken = await getRefreshToken();
 
   const envCheck = {
     YOUTUBE_CLIENT_ID: !!clientId,

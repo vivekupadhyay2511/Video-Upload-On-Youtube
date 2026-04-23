@@ -8,6 +8,7 @@ import {
   downloadSourceVideo,
   getErrorMessage,
 } from "@/lib/video-utils";
+import { getRefreshToken } from "@/lib/token-storage";
 
 const requestSchema = z.object({
   sourceUrl: z.string().url(),
@@ -35,11 +36,11 @@ function getKolkataTimeISO(dateStr: string, timeStr: string): string {
   return new Date(finalUtcMs).toISOString();
 }
 
-function getOAuth2Client() {
+async function getOAuth2Client() {
   const clientId = process.env.YOUTUBE_CLIENT_ID;
   const clientSecret = process.env.YOUTUBE_CLIENT_SECRET;
   const redirectUri = process.env.YOUTUBE_REDIRECT_URI;
-  const refreshToken = process.env.YOUTUBE_REFRESH_TOKEN;
+  const refreshToken = await getRefreshToken();
 
   if (!clientId || !clientSecret || !redirectUri || !refreshToken) {
     const missing: string[] = [];
@@ -66,7 +67,7 @@ async function uploadToYouTube(params: {
   privacyStatus: "private" | "unlisted" | "public";
   publishAt?: string;
 }) {
-  const oauth2Client = getOAuth2Client();
+  const oauth2Client = await getOAuth2Client();
 
   // Force a token refresh before uploading to catch expired token early
   try {

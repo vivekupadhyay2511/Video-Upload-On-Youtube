@@ -175,9 +175,9 @@ export default function ReauthPage() {
                   {saveResult.ok ? "✅" : "❌"} {saveResult.message}
                 </div>
 
-                {saveResult.ok && (saveResult as any).isProduction && (
+                {saveResult.ok && (saveResult as any).needsKV && (
                   <div className="manual-save-box">
-                    <p>Copy this Refresh Token and add it to your <strong>Vercel Project Settings &gt; Environment Variables</strong>:</p>
+                    <p>Copy this Refresh Token and add it to your <strong>Vercel Project Settings</strong> (as <code>YOUTUBE_REFRESH_TOKEN</code>) OR connect <strong>Vercel KV</strong> storage to automate this:</p>
                     <div className="cred-val-row">
                       <code className="cred-value">{(saveResult as any).refreshToken}</code>
                       <button
@@ -187,10 +187,11 @@ export default function ReauthPage() {
                         Copy Token
                       </button>
                     </div>
-                    <p className="step-note" style={{ marginTop: "10px" }}>
-                      Key: <code>YOUTUBE_REFRESH_TOKEN</code>
-                    </p>
                   </div>
+                )}
+
+                {saveResult.ok && !saveResult.message.includes("Vercel Storage") && (
+                   <p className="step-note">The token is now stored securely in { (saveResult as any).location || 'the cloud' }.</p>
                 )}
 
                 {saveResult.ok && (

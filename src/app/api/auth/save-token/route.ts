@@ -1,7 +1,6 @@
 import { google } from "googleapis";
-import { readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import { z } from "zod";
+import { setRefreshToken } from "@/lib/token-storage";
 
 const schema = z.object({
   refreshToken: z.string().min(10),
@@ -50,50 +49,28 @@ export async function POST(request: Request) {
       );
     }
 
-    // Token is valid
-    
-    // If we are on Vercel or in Production, we can't (or shouldn't) write to .env.local
-    if (process.env.VERCEL || process.env.NODE_ENV === "production") {
-      return Response.json({
-        ok: true,
-        isProduction: true,
-        refreshToken: refreshToken,
-        message: "✅ Token verified! Since you are on Vercel/Production, you must manually add this to your Environment Variables.",
-      });
+    // Token is valid — save it using our storage utility
+    const result = await setRefreshToken(refreshToken);
+
+    if (!result.success) {
+      // If we are on Vercel and KV isn't set up, we still want to tell the user
+      if (process.env.VERCEL && !process.env.KV_REST_API_URL) {
+        return Response.json({
+          ok: true,
+          isProduction: true,
+          needsKV: true,
+          refreshToken: refreshToken,
+          message: "✅ Token verified! But Vercel Storage (KV) is not connected. Please connect KV in your dashboard or add the token manually.",
+        });
+      }
+      
+      throw new Error("Failed to save token to storage.");
     }
-
-    // Local Dev — update .env.local
-    const envPath = join(process.cwd(), ".env.local");
-    let envContent = "";
-
-    try {
-      envContent = await readFile(envPath, "utf-8");
-    } catch {
-      // File doesn't exist yet, start fresh
-      envContent = "";
-    }
-
-    // Replace or append the YOUTUBE_REFRESH_TOKEN line
-    if (envContent.includes("YOUTUBE_REFRESH_TOKEN=")) {
-      envContent = envContent
-        .split("\n")
-        .map((line) =>
-          line.startsWith("YOUTUBE_REFRESH_TOKEN=")
-            ? `YOUTUBE_REFRESH_TOKEN=${refreshToken}`
-            : line
-        )
-        .join("\n");
-    } else {
-      envContent = envContent.trimEnd() + `\nYOUTUBE_REFRESH_TOKEN=${refreshToken}\n`;
-    }
-
-    await writeFile(envPath, envContent, "utf-8");
 
     return Response.json({
       ok: true,
-      isProduction: false,
-      message:
-        "✅ Token saved to .env.local! You must RESTART the dev server (Ctrl+C → npm run dev) for the new token to take effect.",
+      location: result.location,
+      message: `✅ Token verified and saved to ${result.location}!`,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unexpected error";
