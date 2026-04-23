@@ -15,6 +15,7 @@ const requestSchema = z.object({
   description: z.string().max(5000).optional().default(""),
   scheduleDate: z.string().optional(),
   scheduleTime: z.string().optional().default(""),
+  privacyStatus: z.enum(["private", "unlisted", "public"]).default("private"),
 });
 
 function getKolkataTimeISO(dateStr: string, timeStr: string): string {
