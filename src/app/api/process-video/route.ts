@@ -49,8 +49,8 @@ function getOAuth2Client() {
     if (!refreshToken) missing.push("YOUTUBE_REFRESH_TOKEN");
     throw new Error(
       `Missing required environment variables: ${missing.join(", ")}. ` +
-        `Add them to .env.local and restart the dev server. ` +
-        `Visit /api/auth/youtube to generate a fresh refresh token.`
+        (process.env.VERCEL ? "Add them to Vercel Project Settings." : "Add them to .env.local and restart.") +
+        ` Visit /api/auth/youtube to generate a fresh refresh token.`
     );
   }
 

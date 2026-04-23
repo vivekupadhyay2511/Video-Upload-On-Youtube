@@ -171,11 +171,32 @@ export default function ReauthPage() {
 
             {saveResult && (
               <div className={`save-result ${saveResult.ok ? "save-ok" : "save-error"}`}>
-                {saveResult.ok ? "✅" : "❌"} {saveResult.message}
+                <div className="save-result-header">
+                  {saveResult.ok ? "✅" : "❌"} {saveResult.message}
+                </div>
+
+                {saveResult.ok && (saveResult as any).isProduction && (
+                  <div className="manual-save-box">
+                    <p>Copy this Refresh Token and add it to your <strong>Vercel Project Settings &gt; Environment Variables</strong>:</p>
+                    <div className="cred-val-row">
+                      <code className="cred-value">{(saveResult as any).refreshToken}</code>
+                      <button
+                        className="copy-btn"
+                        onClick={() => navigator.clipboard.writeText((saveResult as any).refreshToken)}
+                      >
+                        Copy Token
+                      </button>
+                    </div>
+                    <p className="step-note" style={{ marginTop: "10px" }}>
+                      Key: <code>YOUTUBE_REFRESH_TOKEN</code>
+                    </p>
+                  </div>
+                )}
+
                 {saveResult.ok && (
-                  <span>
-                    {" "}&mdash; <a href="/">Return to home →</a>
-                  </span>
+                  <div style={{ marginTop: "10px" }}>
+                    <a href="/" className="back-link">Return to home →</a>
+                  </div>
                 )}
               </div>
             )}

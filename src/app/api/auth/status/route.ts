@@ -18,10 +18,12 @@ export async function GET() {
     .map(([k]) => k);
 
   if (missingVars.length > 0) {
+    const isVercel = !!process.env.VERCEL;
     return Response.json({
       ok: false,
       status: "missing_env",
-      message: `Missing environment variables: ${missingVars.join(", ")}. Add them to .env.local.`,
+      message: `Missing environment variables: ${missingVars.join(", ")}. ` +
+               (isVercel ? "Add them to Vercel Project Settings." : "Add them to .env.local."),
       envCheck,
     });
   }
