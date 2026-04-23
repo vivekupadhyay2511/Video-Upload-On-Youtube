@@ -4,11 +4,10 @@
   "description": "Next.js app to download a YouTube Short or Instagram Reel and upload it to a YouTube channel.",
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/setup-yt-dlp.js && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "postinstall": "node scripts/setup-yt-dlp.js"
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",

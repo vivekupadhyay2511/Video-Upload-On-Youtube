@@ -53,7 +53,9 @@ export async function getVideoInfo(sourceUrl: string) {
   return info as any;
 }
 
-export function improveTitle(title: string) {
+export function improveTitle(title?: string) {
+  if (!title) return "Untitled Video";
+
   // Simple "AI" improvement: Clean up, capitalize, and add hashtags
   let improved = title
     .replace(/[\[\]\(\)]/g, "") // Remove brackets/parens
