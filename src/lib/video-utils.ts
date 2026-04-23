@@ -6,13 +6,7 @@ import { ZodError } from "zod";
 
 const ytDlpBinaryName = process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp";
 const youtubeDl = createYoutubeDl(
-  join(
-    process.cwd(),
-    "node_modules",
-    "youtube-dl-exec",
-    "bin",
-    ytDlpBinaryName,
-  ),
+  join(process.cwd(), "bin", ytDlpBinaryName)
 );
 
 const allowedHosts = new Set([
@@ -126,30 +120,7 @@ export function getErrorMessage(error: unknown) {
     rawMessage.includes("This video is not available") ||
     rawMessage.includes("Video unavailable")
   ) {
-    return "That YouTube video is currently unavailable. It may be private, deleted, age-restricted, region-blocked, or temporarily inaccessible. Open the link in your browser to confirm it plays from this machine, then try another public URL if needed.";
-  }
-
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "response" in error &&
-    typeof error.response === "object" &&
-    error.response !== null &&
-    "data" in error.response
-  ) {
-    const data = error.response.data;
-
-    if (
-      typeof data === "object" &&
-      data !== null &&
-      "error" in data &&
-      typeof data.error === "object" &&
-      data.error !== null &&
-      "message" in data.error &&
-      typeof data.error.message === "string"
-    ) {
-      return data.error.message;
-    }
+    return "That YouTube video is currently unavailable. It may be private, deleted, or restricted.";
   }
 
   if (
@@ -162,28 +133,9 @@ export function getErrorMessage(error: unknown) {
     return error.stderr.trim();
   }
 
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "stdout" in error &&
-    typeof error.stdout === "string" &&
-    error.stdout.trim()
-  ) {
-    return error.stdout.trim();
-  }
-
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "exitCode" in error &&
-    typeof error.exitCode === "number"
-  ) {
-    return `Video download failed with exit code ${error.exitCode}. This usually means the source URL is unavailable, blocked, or ffmpeg is missing on the machine.`;
-  }
-
   if (error instanceof Error && error.message.trim()) {
     return error.message;
   }
 
-  return "Unexpected error while processing the video. Check the Next.js terminal log for downloader or YouTube API details.";
+  return "Unexpected error while processing the video.";
 }
