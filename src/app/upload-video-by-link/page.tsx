@@ -126,200 +126,173 @@ export default function UploadVideoPage() {
 
   return (
     <main className="page-shell">
-      <section className="hero-card">
-        <h1>Upload Video By Link</h1>
+      <article className="hero-card animate-fade-in" style={{ marginBottom: '2rem' }}>
+        <h1 className="gradient-text">Single Video Upload</h1>
+        <p style={{ color: 'var(--muted)', marginBottom: '2rem' }}>Download and optimize any video link for YouTube.</p>
 
-        {/* ── Sequential Flow ── */}
-        <div className="sequential-flow">
-          {/* STEP 1: DOWNLOAD */}
-          <article className={`flow-panel ${!isDownloaded ? "flow-panel-primary" : ""}`}>
-            <div className="download-layout">
-              <div className="download-left">
-                <div className="video-form">
-                  <label>
-                    Video link
-                    <input
-                      required
-                      type="url"
-                      placeholder="https://www.youtube.com/watch?v=... or https://www.instagram.com/reel/..."
-                      value={sourceUrl}
-                      onChange={(event) => setSourceUrl(event.target.value)}
-                    />
-                  </label>
+        <div className="video-form">
+          <label>
+            Video Link
+            <input
+              required
+              type="url"
+              placeholder="Paste YouTube or Instagram link..."
+              value={sourceUrl}
+              onChange={(event) => setSourceUrl(event.target.value)}
+            />
+          </label>
 
-                  <button
-                    className="primary-action"
-                    disabled={!sourceUrl || activeAction !== null}
-                    onClick={handleDownload}
-                    type="button"
-                  >
-                    {activeAction === "download" ? "Downloading video…" : "Download Video"}
-                  </button>
-                </div>
+          <button
+            className="primary-action"
+            disabled={!sourceUrl || activeAction !== null}
+            onClick={handleDownload}
+            type="button"
+          >
+            {activeAction === "download" ? (
+              <><span className="ai-loader"></span> Downloading...</>
+            ) : "🚀 Download Video"}
+          </button>
 
-                {result && !result.success && (
-                  <div className="result-inline error-text">
-                    <p className="status-msg">{result.message}</p>
-                  </div>
-                )}
-              </div>
-
-              {result && result.success && "previewUrl" in result && result.previewUrl && (
-                <div className="download-right animate-fade-in">
-                  <video className="preview-video fixed-height-preview" controls src={result.previewUrl} key={result.previewUrl} />
-                  {"downloadUrl" in result && result.downloadUrl && (
-                    <a href={result.downloadUrl} rel="noreferrer" target="_blank" className="download-link">
-                      Download locally
-                    </a>
-                  )}
-                </div>
-              )}
+          {result && !result.success && (
+            <div style={{ color: '#f87171', fontSize: '0.9rem', marginTop: '1rem', background: 'rgba(248, 113, 113, 0.1)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(248, 113, 113, 0.2)' }}>
+              {result.message}
             </div>
-          </article>
-
-          {/* STEP 2: UPLOAD (Only visible if downloaded) */}
-          {isDownloaded && (
-            <article className="flow-panel flow-panel-primary animate-fade-in">
-              <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
-                <button
-                  type="button"
-                  onClick={generateAllContentWithAi}
-                  disabled={isAiGenerating || !title}
-                  className="premium-ai-btn"
-                  style={{
-                    background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '12px 24px',
-                    borderRadius: '12px',
-                    fontWeight: '800',
-                    fontSize: '1rem',
-                    cursor: 'pointer',
-                    boxShadow: '0 4px 15px rgba(168, 85, 247, 0.4)',
-                    transition: 'all 0.3s ease',
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '10px'
-                  }}
-                >
-                  {isAiGenerating ? (
-                    <>
-                      <span className="ai-loader"></span>
-                      Generating AI Magic...
-                    </>
-                  ) : "✨ Generate Content based on AI"}
-                </button>
-              </div>
-
-              <form className="video-form" onSubmit={handleUpload}>
-                <label style={{ position: 'relative' }}>
-                  YouTube title (Optimized by AI)
-                  <input
-                    required
-                    maxLength={100}
-                    placeholder="My uploaded short"
-                    value={title}
-                    onChange={(event) => setTitle(event.target.value)}
-                  />
-                  <span className="char-count" style={{ right: '12px' }}>{title.length}/100</span>
-                </label>
-
-                <label style={{ position: 'relative' }}>
-                  Description
-                  <textarea
-                    rows={6}
-                    maxLength={5000}
-                    placeholder="Optional YouTube description"
-                    value={description}
-                    onChange={(event) => setDescription(event.target.value)}
-                  />
-                </label>
-
-                <label>
-                  Privacy status
-                  <select
-                    value={privacyStatus}
-                    onChange={(event) => setPrivacyStatus(event.target.value)}
-                    disabled={isScheduled}
-                  >
-                    <option value="private">Private</option>
-                    <option value="unlisted">Unlisted</option>
-                    <option value="public">Public</option>
-                  </select>
-                  {isScheduled && (
-                    <span className="hint-text" style={{ color: "var(--accent-dark)", fontSize: "0.8rem", marginTop: "-4px" }}>
-                      Scheduled videos must be set to Private.
-                    </span>
-                  )}
-                </label>
-
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={isScheduled}
-                    onChange={(e) => {
-                      setIsScheduled(e.target.checked);
-                      if (e.target.checked) setPrivacyStatus("private");
-                    }}
-                    style={{ width: 'auto', margin: 0 }}
-                  />
-                  Schedule Video (Kolkata GMT+05:30)
-                </label>
-
-                {isScheduled && (
-                  <div style={{ display: 'grid', gap: '12px' }}>
-                    <label>
-                      Date
-                      <input
-                        type="date"
-                        value={scheduleDate}
-                        onChange={(event) => setScheduleDate(event.target.value)}
-                      />
-                    </label>
-                    <label>
-                      Time
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <select value={scheduleHour} onChange={e => setScheduleHour(e.target.value)} style={{ flex: 1 }}>
-                          {["00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"].map(h => (
-                            <option key={h} value={h}>{h}</option>
-                          ))}
-                        </select>
-                        <span style={{ display: 'flex', alignItems: 'center' }}>:</span>
-                        <select value={scheduleMinute} onChange={e => setScheduleMinute(e.target.value)} style={{ flex: 1 }}>
-                          {["00", "10", "20", "30", "40", "50", "60"].map(m => (
-                            <option key={m} value={m}>{m}</option>
-                          ))}
-                        </select>
-                        <select value={scheduleAmPm} onChange={e => setScheduleAmPm(e.target.value)} style={{ flex: 1 }}>
-                          <option value="AM">AM</option>
-                          <option value="PM">PM</option>
-                        </select>
-                      </div>
-                    </label>
-                  </div>
-                )}
-
-                <button disabled={activeAction !== null} type="submit" className="upload-btn">
-                  {activeAction === "upload"
-                    ? "Uploading to YouTube…"
-                    : "Upload to YouTube Now"}
-                </button>
-              </form>
-
-              {result && "watchUrl" in result && result.watchUrl && (
-                <div className="success-banner">
-                  <p>✅ Success! Your video is uploaded.</p>
-                  <a href={result.watchUrl} rel="noreferrer" target="_blank">
-                    View on YouTube →
-                  </a>
-                </div>
-              )}
-            </article>
           )}
         </div>
-      </section>
+
+        {result && result.success && "previewUrl" in result && result.previewUrl && (
+          <div style={{ marginTop: '2rem', borderTop: '1px solid var(--line)', paddingTop: '2rem' }}>
+            <video 
+              style={{ width: '100%', borderRadius: '12px', background: '#000', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }} 
+              controls 
+              src={result.previewUrl} 
+              key={result.previewUrl} 
+            />
+          </div>
+        )}
+      </article>
+
+      {isDownloaded && (
+        <article className="hero-card animate-fade-in">
+          <div style={{ marginBottom: '2rem' }}>
+            <button
+              type="button"
+              onClick={generateAllContentWithAi}
+              disabled={isAiGenerating || !title}
+              className="premium-ai-btn"
+            >
+              {isAiGenerating ? (
+                <>
+                  <span className="ai-loader"></span>
+                  Generating AI Magic...
+                </>
+              ) : "✨ Generate Content based on AI"}
+            </button>
+          </div>
+
+          <form className="video-form" onSubmit={handleUpload}>
+            <label style={{ position: 'relative' }}>
+              YouTube Title
+              <input
+                required
+                maxLength={100}
+                placeholder="Optimized AI Title"
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+              />
+              <span className="char-count" style={{ right: '12px' }}>{title.length}/100</span>
+            </label>
+
+            <label>
+              Description
+              <textarea
+                rows={6}
+                maxLength={5000}
+                placeholder="Viral tags and description..."
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+              />
+            </label>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+              <label>
+                Privacy Status
+                <select
+                  value={privacyStatus}
+                  onChange={(event) => setPrivacyStatus(event.target.value)}
+                  disabled={isScheduled}
+                >
+                  <option value="private">Private</option>
+                  <option value="unlisted">Unlisted</option>
+                  <option value="public">Public</option>
+                </select>
+              </label>
+
+              <label style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '12px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={isScheduled}
+                  onChange={(event) => setIsScheduled(event.target.checked)}
+                  style={{ width: '20px', height: '20px', accentColor: 'var(--accent)' }}
+                />
+                Schedule Post
+              </label>
+            </div>
+
+            {isScheduled && (
+              <div className="animate-fade-in" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', background: 'rgba(255, 255, 255, 0.03)', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--line)' }}>
+                <label>
+                  Date
+                  <input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} />
+                </label>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                  <label style={{ flex: 1 }}>
+                    Time
+                    <select value={scheduleHour} onChange={(e) => setScheduleHour(e.target.value)}>
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map(h => (
+                        <option key={h} value={String(h).padStart(2, '0')}>{h}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <select style={{ width: '80px' }} value={scheduleMinute} onChange={(e) => setScheduleMinute(e.target.value)}>
+                    {["00", "15", "30", "45"].map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                  <select style={{ width: '80px' }} value={scheduleAmPm} onChange={(e) => setScheduleAmPm(e.target.value)}>
+                    <option value="AM">AM</option>
+                    <option value="PM">PM</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+            <button
+              className="primary-action"
+              disabled={activeAction !== null}
+              type="submit"
+              style={{ background: '#16a34a', width: '100%', marginTop: '1rem' }}
+            >
+              {activeAction === "upload" ? (
+                <><span className="ai-loader"></span> Uploading...</>
+              ) : "🚀 Upload to YouTube Now"}
+            </button>
+          </form>
+
+          {result && (
+            <div style={{ marginTop: '2rem', textAlign: 'center' }}>
+              <p style={{ fontSize: '1.1rem', fontWeight: 600, color: result.success ? '#4ade80' : '#f87171' }}>
+                {result.message}
+              </p>
+              {result.success && "watchUrl" in result && (
+                <a href={result.watchUrl} target="_blank" rel="noreferrer" className="gradient-text" style={{ textDecoration: 'none', fontWeight: 700 }}>
+                  View on YouTube ↗
+                </a>
+              )}
+            </div>
+          )}
+        </article>
+      )}
     </main>
   );
 }

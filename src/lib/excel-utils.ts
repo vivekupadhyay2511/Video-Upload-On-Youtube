@@ -18,22 +18,58 @@ export interface BulkVideoRow {
 }
 
 export function parseExcelFile(buffer: ArrayBuffer): BulkVideoRow[] {
-  const workbook = XLSX.read(buffer, { type: 'array' });
+  // Read with cellDates: true to handle dates as Date objects
+  const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
   const firstSheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[firstSheetName];
   const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
 
-  return jsonData.map((row, index) => ({
-    srNo: row['Sr No'] || index + 1,
-    videoLink: row['Video Link'] || '',
-    visibilityType: row['Visibility Type'] === 'Schedule' ? 'Schedule' : 'Publish',
-    scheduleDate: row['Schedule Date'] || '',
-    scheduleTime: row['Schedule Time'] || '',
-    videoStatus: 'idle',
-    titleStatus: 'idle',
-    descriptionStatus: 'idle',
-    uploadStatus: 'idle'
-  }));
+  // Helper to convert Excel serial date to YYYY-MM-DD
+  const formatDate = (val: any): string => {
+    if (!val) return '';
+    if (val instanceof Date) {
+      return val.toISOString().split('T')[0];
+    }
+    if (typeof val === 'number') {
+      // Excel serial date to JS Date
+      const date = new Date(Math.round((val - 25569) * 86400 * 1000));
+      return date.toISOString().split('T')[0];
+    }
+    // If it's already a string like "2026-04-26"
+    const str = String(val).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+    
+    // Try to parse as date string
+    const parsed = new Date(str);
+    if (!isNaN(parsed.getTime())) return parsed.toISOString().split('T')[0];
+    
+    return str;
+  };
+
+  return jsonData.map((row, index) => {
+    const findKey = (obj: any, target: string) => {
+      const keys = Object.keys(obj);
+      return keys.find(k => k.toLowerCase().replace(/\s/g, '') === target.toLowerCase().replace(/\s/g, ''));
+    };
+
+    const linkKey = findKey(row, 'VideoLink') || 'Video Link';
+    const visKey = findKey(row, 'VisibilityType') || 'Visibility Type';
+    const dateKey = findKey(row, 'ScheduleDate') || 'Schedule Date';
+    const timeKey = findKey(row, 'ScheduleTime') || 'Schedule Time';
+    const srKey = findKey(row, 'SrNo') || 'Sr No';
+
+    return {
+      srNo: row[srKey] || index + 1,
+      videoLink: row[linkKey] || '',
+      visibilityType: String(row[visKey]).trim() === 'Schedule' ? 'Schedule' : 'Publish',
+      scheduleDate: formatDate(row[dateKey]),
+      scheduleTime: row[timeKey] ? String(row[timeKey]).trim() : '',
+      videoStatus: 'idle',
+      titleStatus: 'idle',
+      descriptionStatus: 'idle',
+      uploadStatus: 'idle'
+    };
+  });
 }
 
 export function generateSampleExcel() {

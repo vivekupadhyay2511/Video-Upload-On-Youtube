@@ -12,7 +12,7 @@ export default function BulkUploadPage() {
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    
+
     setIsReading(true);
     try {
       const buffer = await file.arrayBuffer();
@@ -43,7 +43,7 @@ export default function BulkUploadPage() {
     for (let i = 0; i < rows.length; i++) {
       if (!rows[i].videoLink) continue;
       updateRow(i, { videoStatus: 'processing' });
-      
+
       try {
         const response = await fetch("/api/download-video", {
           method: "POST",
@@ -52,10 +52,10 @@ export default function BulkUploadPage() {
         });
         const data = await response.json();
         if (data.success) {
-          updateRow(i, { 
-            videoStatus: 'completed', 
-            previewUrl: data.previewUrl, 
-            title: data.title 
+          updateRow(i, {
+            videoStatus: 'completed',
+            previewUrl: data.previewUrl,
+            title: data.title
           });
         } else {
           updateRow(i, { videoStatus: 'error', message: data.message });
@@ -72,13 +72,13 @@ export default function BulkUploadPage() {
     for (let i = 0; i < rows.length; i++) {
       if (!rows[i].title) continue;
       updateRow(i, { titleStatus: 'processing' });
-      
+
       try {
         const response = await fetch("/api/ai/generate-text", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            prompt: `Generate a catchy, viral YouTube title (MAX 100 characters) including 2-3 hashtags at the end for: "${rows[i].title}"` 
+          body: JSON.stringify({
+            prompt: `Generate a catchy, viral YouTube title (MAX 100 characters) including 2-3 hashtags at the end for: "${rows[i].title}"`
           }),
         });
         const data = await response.json();
@@ -98,13 +98,13 @@ export default function BulkUploadPage() {
     for (let i = 0; i < rows.length; i++) {
       if (!rows[i].title) continue;
       updateRow(i, { descriptionStatus: 'processing' });
-      
+
       try {
         const response = await fetch("/api/ai/generate-text", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            prompt: `Generate a viral YouTube description with 15-20 trending hashtags for: "${rows[i].title}"` 
+          body: JSON.stringify({
+            prompt: `Generate a viral YouTube description with 15-20 trending hashtags for: "${rows[i].title}"`
           }),
         });
         const data = await response.json();
@@ -124,19 +124,20 @@ export default function BulkUploadPage() {
     for (let i = 0; i < rows.length; i++) {
       if (!rows[i].videoLink || !rows[i].previewUrl) continue;
       updateRow(i, { uploadStatus: 'processing', message: 'Uploading...' });
-      
+
       try {
         const uploadTitle = String(rows[i].title || "").trim();
+        const isScheduled = rows[i].visibilityType === 'Schedule';
         const response = await fetch("/api/process-video", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             sourceUrl: String(rows[i].videoLink),
             title: uploadTitle.length >= 3 ? uploadTitle : `Video ${rows[i].srNo}`,
             description: String(rows[i].description || ""),
-            privacyStatus: rows[i].visibilityType === 'Publish' ? 'public' : 'private',
-            scheduleDate: String(rows[i].scheduleDate || ""),
-            scheduleTime: String(rows[i].scheduleTime || "")
+            privacyStatus: isScheduled ? 'private' : 'public',
+            scheduleDate: isScheduled ? String(rows[i].scheduleDate || "") : "",
+            scheduleTime: isScheduled ? String(rows[i].scheduleTime || "") : ""
           }),
         });
         const data = await response.json();
@@ -156,14 +157,14 @@ export default function BulkUploadPage() {
     <main className="page-shell">
       <section className="hero-card bulk-container animate-fade-in">
         <h1 className="gradient-text" style={{ textAlign: 'center', marginBottom: '2rem' }}>Upload Multiple Video</h1>
-        
+
         <div className="bulk-controls">
           <div className="upload-zone glassmorphism" onClick={() => fileInputRef.current?.click()}>
-            <input 
-              type="file" 
-              accept=".xlsx, .xls" 
-              ref={fileInputRef} 
-              style={{ display: 'none' }} 
+            <input
+              type="file"
+              accept=".xlsx, .xls"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
               onChange={handleFileUpload}
             />
             <div className="upload-placeholder">
@@ -171,19 +172,19 @@ export default function BulkUploadPage() {
               <p>{isReading ? "Reading file..." : "Click or Drag Excel file here to upload"}</p>
             </div>
           </div>
-          
+
           <div className="action-row" style={{ flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
             <button className="secondary-btn" onClick={handleDownloadSample}>📥 Download Sample Excel</button>
             <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: 0, textAlign: 'center', maxWidth: '600px' }}>
-              Download this sample to add multiple video links and visibility settings. 
+              Download this sample to add multiple video links and visibility settings.
               <strong> Note:</strong> If Visibility Type is set to <strong>Schedule</strong>, you must also provide the Date and Time.
             </p>
           </div>
-          
+
           {rows.length > 0 && (
             <div className="action-row">
               <button className="premium-ai-btn" onClick={generateVideos} disabled={!!globalLoading}>
-                {globalLoading === "Downloading Videos..." ? "⏳ Downloading..." : "✨ Generate Video"}
+                {globalLoading === "Downloading Videos..." ? "⏳ Downloading..." : "✨ Download Video"}
               </button>
               <button className="premium-ai-btn" onClick={generateTitles} disabled={!!globalLoading}>
                 {globalLoading === "Generating AI Titles..." ? "⏳ Generating..." : "✨ Generate Title"}
@@ -231,18 +232,18 @@ export default function BulkUploadPage() {
                     </td>
                     <td style={{ position: 'relative' }}>
                       {row.titleStatus === 'processing' && <div className="cell-loader-overlay"><span className="ai-loader-small"></span></div>}
-                      <textarea 
-                        className="table-input" 
-                        value={row.title || ""} 
+                      <textarea
+                        className="table-input"
+                        value={row.title || ""}
                         onChange={(e) => updateRow(index, { title: e.target.value })}
                         placeholder="Pending..."
                       />
                     </td>
                     <td style={{ position: 'relative' }}>
                       {row.descriptionStatus === 'processing' && <div className="cell-loader-overlay"><span className="ai-loader-small"></span></div>}
-                      <textarea 
-                        className="table-input" 
-                        value={row.description || ""} 
+                      <textarea
+                        className="table-input"
+                        value={row.description || ""}
                         onChange={(e) => updateRow(index, { description: e.target.value })}
                         placeholder="Pending..."
                       />
@@ -263,7 +264,7 @@ export default function BulkUploadPage() {
 
       <style jsx>{`
         .bulk-container {
-          max-width: 860px !important;
+          // max-width: 1200px !important;
           width: 100% !important;
         }
 
