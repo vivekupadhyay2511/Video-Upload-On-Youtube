@@ -115,6 +115,9 @@ export default function Header() {
               <a href="/upload-video-by-link" onClick={() => setIsDropdownOpen(false)} style={{ display: 'block', padding: '10px 12px', textDecoration: 'none', color: 'var(--text)', borderRadius: '8px', fontSize: '0.9rem' }} className="menu-item">
                 🔗 Upload Video By Link
               </a>
+              <a href="/upload-multiple-video" onClick={() => setIsDropdownOpen(false)} style={{ display: 'block', padding: '10px 12px', textDecoration: 'none', color: 'var(--text)', borderRadius: '8px', fontSize: '0.9rem' }} className="menu-item">
+                📁 Upload Multiple Video
+              </a>
               {/* <a href="/ai-studio" onClick={() => setIsDropdownOpen(false)} style={{ display: 'block', padding: '10px 12px', textDecoration: 'none', color: 'var(--text)', borderRadius: '8px', fontSize: '0.9rem' }} className="menu-item">
                 ✨ AI Creative Studio
               </a> */}

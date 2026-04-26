@@ -1,39 +1,42 @@
 :root {
-  color-scheme: light;
-  --bg: #f5efe3;
-  --card: rgba(255, 251, 244, 0.92);
-  --text: #1f1a15;
-  --muted: #66594b;
-  --accent: #cc5f36;
-  --accent-dark: #9f4523;
-  --line: rgba(31, 26, 21, 0.12);
+  --bg: #0a0a0c;
+  --card: rgba(23, 23, 26, 0.7);
+  --text: #f4f4f5;
+  --muted: #a1a1aa;
+  --accent: #6366f1;
+  --accent-glow: rgba(99, 102, 241, 0.3);
+  --line: rgba(255, 255, 255, 0.1);
+  --radius-lg: 20px;
+  --radius-md: 12px;
+  --shadow-premium: 0 20px 40px rgba(0, 0, 0, 0.4);
 }
 
 * {
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) transparent;
 }
 
 html,
 body {
   margin: 0;
-  min-height: 100%;
-  font-family: Georgia, "Times New Roman", serif;
-  background:
-    radial-gradient(circle at top left, rgba(204, 95, 54, 0.18), transparent 32%),
-    radial-gradient(circle at bottom right, rgba(31, 122, 83, 0.16), transparent 28%),
-    linear-gradient(135deg, #f8f1e4, #f0e7d8 55%, #eadfce);
+  min-height: 100vh;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg);
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(236, 72, 153, 0.1) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(124, 58, 237, 0.1) 0px, transparent 50%);
   color: var(--text);
-}
-
-a {
-  color: inherit;
+  line-height: 1.5;
 }
 
 .page-shell {
-  /* min-height: 100vh; */
-  display: grid;
-  place-items: center;
-  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  width: 100%;
 }
 
 /* ── App Header ── */
