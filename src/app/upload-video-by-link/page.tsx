@@ -38,6 +38,28 @@ export default function UploadVideoPage() {
   const [scheduleAmPm, setScheduleAmPm] = useState("PM");
   const [activeAction, setActiveAction] = useState<"download" | "upload" | null>(null);
   const [result, setResult] = useState<ProcessResponse | null>(null);
+  const [isAiGenerating, setIsAiGenerating] = useState(false);
+
+  const generateAllContentWithAi = async () => {
+    if (!title) return;
+    setIsAiGenerating(true);
+    try {
+      const response = await fetch("/api/ai/generate-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          prompt: `Generate a catchy, viral YouTube title (MAX 100 characters) including 2-3 hashtags at the end, and a separate detailed description that includes a viral message and 15-20 trending YouTube hashtags at the bottom, all based on the video: "${title}".` 
+        }),
+      });
+      const data = await response.json();
+      if (data.title) setTitle(data.title);
+      if (data.description) setDescription(data.description);
+    } catch (error) {
+      console.error("AI Generation Error:", error);
+    } finally {
+      setIsAiGenerating(false);
+    }
+  };
 
   const handleUpload = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -78,6 +100,20 @@ export default function UploadVideoPage() {
       setResult(data);
       if (data.success && data.title) {
         setTitle(data.title);
+        // Automatically trigger AI generation
+        // We delay it slightly to ensure state is updated or we pass it directly
+        // But for consistency we'll just call it
+        setIsAiGenerating(true);
+        fetch("/api/ai/generate-text", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            prompt: `Generate a catchy, viral YouTube title (MAX 100 characters) including 2-3 hashtags at the end, and a separate detailed description that includes a viral message and 15-20 trending YouTube hashtags at the bottom, all based on the video: "${data.title}".` 
+          }),
+        }).then(res => res.json()).then(aiData => {
+          if (aiData.title) setTitle(aiData.title);
+          if (aiData.description) setDescription(aiData.description);
+        }).finally(() => setIsAiGenerating(false));
       }
     } catch {
       setResult({ success: false, message: "Something went wrong while sending the request." });
@@ -144,8 +180,41 @@ export default function UploadVideoPage() {
           {/* STEP 2: UPLOAD (Only visible if downloaded) */}
           {isDownloaded && (
             <article className="flow-panel flow-panel-primary animate-fade-in">
+              <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
+                <button
+                  type="button"
+                  onClick={generateAllContentWithAi}
+                  disabled={isAiGenerating || !title}
+                  className="premium-ai-btn"
+                  style={{
+                    background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: '12px',
+                    fontWeight: '800',
+                    fontSize: '1rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 15px rgba(168, 85, 247, 0.4)',
+                    transition: 'all 0.3s ease',
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px'
+                  }}
+                >
+                  {isAiGenerating ? (
+                    <>
+                      <span className="ai-loader"></span>
+                      Generating AI Magic...
+                    </>
+                  ) : "✨ Generate Content based on AI"}
+                </button>
+              </div>
+
               <form className="video-form" onSubmit={handleUpload}>
-                <label>
+                <label style={{ position: 'relative' }}>
                   YouTube title (Optimized by AI)
                   <input
                     required
@@ -154,13 +223,13 @@ export default function UploadVideoPage() {
                     value={title}
                     onChange={(event) => setTitle(event.target.value)}
                   />
-                  <span className="char-count">{title.length}/100</span>
+                  <span className="char-count" style={{ right: '12px' }}>{title.length}/100</span>
                 </label>
 
-                <label>
+                <label style={{ position: 'relative' }}>
                   Description
                   <textarea
-                    rows={4}
+                    rows={6}
                     maxLength={5000}
                     placeholder="Optional YouTube description"
                     value={description}
@@ -241,7 +310,7 @@ export default function UploadVideoPage() {
 
               {result && "watchUrl" in result && result.watchUrl && (
                 <div className="success-banner">
-                  <p>✅ Success! Your video is live.</p>
+                  <p>✅ Success! Your video is uploaded.</p>
                   <a href={result.watchUrl} rel="noreferrer" target="_blank">
                     View on YouTube →
                   </a>

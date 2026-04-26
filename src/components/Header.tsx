@@ -47,8 +47,8 @@ export default function Header() {
               ? authStatus.channels[0].thumbnail
               : "/default-image.jpg"}
             alt="Logo"
-            title={authStatus?.ok && authStatus.channels && authStatus.channels.length > 0 
-              ? authStatus.channels[0].title || "YouTube Channel" 
+            title={authStatus?.ok && authStatus.channels && authStatus.channels.length > 0
+              ? authStatus.channels[0].title || "YouTube Channel"
               : "Not Authenticated"}
             className="app-logo"
             style={{ borderRadius: authStatus?.ok ? '50%' : '0', objectFit: 'cover' }}
@@ -71,7 +71,7 @@ export default function Header() {
         </div>
 
         <div className="header-right" style={{ position: 'relative', display: 'flex', justifyContent: 'flex-end' }}>
-          <button 
+          <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             style={{
               background: 'transparent',
@@ -115,6 +115,9 @@ export default function Header() {
               <a href="/upload-video-by-link" onClick={() => setIsDropdownOpen(false)} style={{ display: 'block', padding: '10px 12px', textDecoration: 'none', color: 'var(--text)', borderRadius: '8px', fontSize: '0.9rem' }} className="menu-item">
                 🔗 Upload Video By Link
               </a>
+              {/* <a href="/ai-studio" onClick={() => setIsDropdownOpen(false)} style={{ display: 'block', padding: '10px 12px', textDecoration: 'none', color: 'var(--text)', borderRadius: '8px', fontSize: '0.9rem' }} className="menu-item">
+                ✨ AI Creative Studio
+              </a> */}
             </div>
           )}
           <style jsx>{`

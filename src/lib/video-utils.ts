@@ -64,16 +64,6 @@ export function improveTitle(title?: string) {
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(" ");
 
-  const hashtags = [" #Viral", " #Trending", " #Shorts", " #Video"];
-
-  for (const tag of hashtags) {
-    if ((improved + tag).length <= 100) {
-      improved += tag;
-    } else {
-      break;
-    }
-  }
-
   return improved.slice(0, 100);
 }
 
