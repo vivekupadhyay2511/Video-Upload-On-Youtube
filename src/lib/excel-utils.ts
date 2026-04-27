@@ -27,22 +27,42 @@ export function parseExcelFile(buffer: ArrayBuffer): BulkVideoRow[] {
   // Helper to convert Excel serial date to YYYY-MM-DD
   const formatDate = (val: any): string => {
     if (!val) return '';
+
+    let date: Date;
     if (val instanceof Date) {
-      return val.toISOString().split('T')[0];
-    }
-    if (typeof val === 'number') {
+      date = val;
+    } else if (typeof val === 'number') {
       // Excel serial date to JS Date
-      const date = new Date(Math.round((val - 25569) * 86400 * 1000));
-      return date.toISOString().split('T')[0];
+      date = new Date(Math.round((val - 25569) * 86400 * 1000));
+    } else {
+      const str = String(val).trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+      date = new Date(str);
     }
-    // If it's already a string like "2026-04-26"
+
+    if (isNaN(date.getTime())) return String(val).trim();
+
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const formatTime = (val: any): string => {
+    if (!val) return '';
+    if (typeof val === 'number') {
+      // Excel stores time as a fraction of a 24h day (0.5 = 12:00 PM)
+      const totalMinutes = Math.round(val * 24 * 60);
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }
     const str = String(val).trim();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
-    
-    // Try to parse as date string
-    const parsed = new Date(str);
-    if (!isNaN(parsed.getTime())) return parsed.toISOString().split('T')[0];
-    
+    // Validate HH:MM format
+    if (/^\d{1,2}:\d{2}$/.test(str)) {
+      const [h, m] = str.split(':');
+      return `${h.padStart(2, '0')}:${m.padStart(2, '0')}`;
+    }
     return str;
   };
 
@@ -63,7 +83,7 @@ export function parseExcelFile(buffer: ArrayBuffer): BulkVideoRow[] {
       videoLink: row[linkKey] || '',
       visibilityType: String(row[visKey]).trim() === 'Schedule' ? 'Schedule' : 'Publish',
       scheduleDate: formatDate(row[dateKey]),
-      scheduleTime: row[timeKey] ? String(row[timeKey]).trim() : '',
+      scheduleTime: formatTime(row[timeKey]),
       videoStatus: 'idle',
       titleStatus: 'idle',
       descriptionStatus: 'idle',
@@ -93,10 +113,10 @@ export function generateSampleExcel() {
   const worksheet = XLSX.utils.json_to_sheet(data);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Sample');
-  
+
   const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
   const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  
+
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

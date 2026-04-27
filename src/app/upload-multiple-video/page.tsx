@@ -38,82 +38,76 @@ export default function BulkUploadPage() {
     });
   };
 
-  const generateVideos = async () => {
-    setGlobalLoading("Downloading Videos...");
+  const generateAllContent = async () => {
+    setGlobalLoading("Processing All Content...");
     for (let i = 0; i < rows.length; i++) {
       if (!rows[i].videoLink) continue;
-      updateRow(i, { videoStatus: 'processing' });
 
+      // Step 1: Download Video
+      updateRow(i, { videoStatus: 'processing' });
+      let currentTitle = rows[i].title || "";
       try {
-        const response = await fetch("/api/download-video", {
+        const dResponse = await fetch("/api/download-video", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sourceUrl: rows[i].videoLink }),
         });
-        const data = await response.json();
-        if (data.success) {
+        const dData = await dResponse.json();
+
+        if (dData.success) {
+          currentTitle = dData.title || currentTitle || ("Video " + rows[i].srNo);
           updateRow(i, {
             videoStatus: 'completed',
-            previewUrl: data.previewUrl,
-            title: data.title
+            previewUrl: dData.previewUrl,
+            title: currentTitle
           });
         } else {
-          updateRow(i, { videoStatus: 'error', message: data.message });
+          updateRow(i, { videoStatus: 'error', message: dData.message });
+          // If download fails, we can still try to generate content if a title exists, 
+          // but usually we want the download to succeed. 
+          // However, let's continue if we have a title.
+          if (!currentTitle) continue;
         }
-      } catch {
-        updateRow(i, { videoStatus: 'error' });
-      }
-    }
-    setGlobalLoading(null);
-  };
 
-  const generateTitles = async () => {
-    setGlobalLoading("Generating AI Titles...");
-    for (let i = 0; i < rows.length; i++) {
-      if (!rows[i].title) continue;
-      updateRow(i, { titleStatus: 'processing' });
-
-      try {
-        const response = await fetch("/api/ai/generate-text", {
+        // Step 2: Generate AI Title
+        updateRow(i, { titleStatus: 'processing' });
+        const tResponse = await fetch("/api/ai/generate-text", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            prompt: `Generate a catchy, viral YouTube title (MAX 100 characters) including 2-3 hashtags at the end for: "${rows[i].title}"`
+            prompt: `Generate a catchy, viral YouTube title (MAX 100 characters) including 2-3 hashtags at the end for: "${currentTitle}"`
           }),
         });
-        const data = await response.json();
-        if (data.title) {
-          updateRow(i, { title: data.title, titleStatus: 'completed' });
+        const tData = await tResponse.json();
+        if (tData.title) {
+          currentTitle = tData.title;
+          updateRow(i, { title: currentTitle, titleStatus: 'completed' });
+        } else {
+          updateRow(i, { titleStatus: 'error' });
         }
-      } catch (error) {
-        console.error(error);
-        updateRow(i, { titleStatus: 'error' });
-      }
-    }
-    setGlobalLoading(null);
-  };
 
-  const generateDescriptions = async () => {
-    setGlobalLoading("Generating AI Descriptions...");
-    for (let i = 0; i < rows.length; i++) {
-      if (!rows[i].title) continue;
-      updateRow(i, { descriptionStatus: 'processing' });
-
-      try {
-        const response = await fetch("/api/ai/generate-text", {
+        // Step 3: Generate AI Description
+        updateRow(i, { descriptionStatus: 'processing' });
+        const descResponse = await fetch("/api/ai/generate-text", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            prompt: `Generate a viral YouTube description with 15-20 trending hashtags for: "${rows[i].title}"`
+            prompt: `Generate a viral YouTube description with 15-20 trending hashtags for: "${currentTitle}"`
           }),
         });
-        const data = await response.json();
-        if (data.description) {
-          updateRow(i, { description: data.description, descriptionStatus: 'completed' });
+        const descData = await descResponse.json();
+        if (descData.description) {
+          updateRow(i, { description: descData.description, descriptionStatus: 'completed' });
+        } else if (descData.title) {
+          // Sometimes the AI returns the text in the 'title' field if it's not JSON
+          updateRow(i, { description: descData.title, descriptionStatus: 'completed' });
+        } else {
+          updateRow(i, { descriptionStatus: 'error' });
         }
+
       } catch (error) {
-        console.error(error);
-        updateRow(i, { descriptionStatus: 'error' });
+        console.error("Row processing error:", error);
+        updateRow(i, { videoStatus: 'error', message: 'Process failed' });
       }
     }
     setGlobalLoading(null);
@@ -183,14 +177,8 @@ export default function BulkUploadPage() {
 
           {rows.length > 0 && (
             <div className="action-row">
-              <button className="premium-ai-btn" onClick={generateVideos} disabled={!!globalLoading}>
-                {globalLoading === "Downloading Videos..." ? "⏳ Downloading..." : "✨ Download Video"}
-              </button>
-              <button className="premium-ai-btn" onClick={generateTitles} disabled={!!globalLoading}>
-                {globalLoading === "Generating AI Titles..." ? "⏳ Generating..." : "✨ Generate Title"}
-              </button>
-              <button className="premium-ai-btn" onClick={generateDescriptions} disabled={!!globalLoading}>
-                {globalLoading === "Generating AI Descriptions..." ? "⏳ Generating..." : "✨ Generate Description"}
+              <button className="premium-ai-btn" style={{ minWidth: '220px' }} onClick={generateAllContent} disabled={!!globalLoading}>
+                {globalLoading === "Processing All Content..." ? "⏳ Processing..." : "✨ Generate All Content"}
               </button>
               <button className="primary-action" style={{ background: '#16a34a', minWidth: '180px' }} onClick={uploadAllToYoutube} disabled={!!globalLoading}>
                 {globalLoading === "Uploading to YouTube..." ? "⏳ Uploading..." : "🚀 Upload All to YouTube"}
@@ -365,18 +353,19 @@ export default function BulkUploadPage() {
         .cell-loader-overlay {
           position: absolute;
           inset: 0;
-          background: rgba(255, 255, 255, 0.4);
+          background: rgba(0, 0, 0, 0.4);
           display: flex;
           align-items: center;
           justify-content: center;
           z-index: 5;
-          backdrop-filter: blur(1px);
+          backdrop-filter: blur(3px);
+          border-radius: 20px;
         }
 
         .ai-loader-small {
-          width: 12px;
-          height: 12px;
-          border: 2px solid rgba(124, 58, 237, 0.3);
+          width: 25px;
+          height: 25px;
+          border: 4px solid rgba(124, 58, 237, 0.3);
           border-radius: 50%;
           border-top-color: #7c3aed;
           animation: ai-spin 0.8s linear infinite;

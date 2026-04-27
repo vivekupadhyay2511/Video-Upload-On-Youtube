@@ -19,20 +19,26 @@ const requestSchema = z.object({
   privacyStatus: z.enum(["private", "unlisted", "public"]).default("private"),
 });
 
+/**
+ * Converts a date and time string into a UTC ISO string, 
+ * strictly treating the input as (GMT+05:30) Kolkata time.
+ */
 function getKolkataTimeISO(dateStr: string, timeStr: string): string {
-  // timeStr is expected to be HH:MM in 24-hour format
+  // Expected formats: dateStr: "YYYY-MM-DD", timeStr: "HH:MM" (24-hour)
   const [hours, minutes] = timeStr.split(":").map(Number);
-  if (isNaN(hours) || isNaN(minutes)) return "";
-
-  // dateStr is expected to be YYYY-MM-DD
   const [year, month, day] = dateStr.split("-").map(Number);
-  if (!year || !month || !day) return "";
 
-  // targetKolkataMs is the UTC timestamp IF Kolkata was UTC.
+  if (isNaN(hours) || isNaN(minutes) || !year || !month || !day) return "";
+
+  // 1. Create a date object in the server's local context using UTC methods
+  // to avoid any server-local timezone interference.
   const targetKolkataMs = Date.UTC(year, month - 1, day, hours, minutes, 0, 0);
   
-  // Kolkata is +05:30. The true UTC time is 5.5 hours before targetKolkataMs.
-  const finalUtcMs = targetKolkataMs - (5.5 * 60 * 60 * 1000);
+  // 2. Hardcode the Kolkata offset: GMT +05:30
+  // Since Kolkata is AHEAD of UTC, we SUBTRACT 5.5 hours to get the UTC equivalent.
+  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+  const finalUtcMs = targetKolkataMs - IST_OFFSET_MS;
+  
   return new Date(finalUtcMs).toISOString();
 }
 
