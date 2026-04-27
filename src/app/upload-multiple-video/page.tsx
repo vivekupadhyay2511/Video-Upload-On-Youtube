@@ -69,40 +69,71 @@ export default function BulkUploadPage() {
           if (!currentTitle) continue;
         }
 
-        // Step 2: Generate AI Title
+        // Step 2: Generate AI Title (with retry)
         updateRow(i, { titleStatus: 'processing' });
-        const tResponse = await fetch("/api/ai/generate-text", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            prompt: `Generate a catchy, viral YouTube title (MAX 100 characters) including 2-3 hashtags at the end for: "${currentTitle}"`
-          }),
-        });
-        const tData = await tResponse.json();
-        if (tData.title) {
-          currentTitle = tData.title;
-          updateRow(i, { title: currentTitle, titleStatus: 'completed' });
-        } else {
-          updateRow(i, { titleStatus: 'error' });
+        let titleGenerated = false;
+        let titleRetries = 0;
+        const maxRetries = 3;
+
+        while (!titleGenerated && titleRetries < maxRetries) {
+          try {
+            const tResponse = await fetch("/api/ai/generate-text", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                prompt: `You are a YouTube SEO expert. Generate a catchy, viral YouTube title (MAX 100 characters) including 2-3 viral hashtags at the end for this video: "${currentTitle}". Return only the title text.`
+              }),
+            });
+            const tData = await tResponse.json();
+            if (tData.title && !tData.error) {
+              currentTitle = tData.title;
+              updateRow(i, { title: currentTitle, titleStatus: 'completed' });
+              titleGenerated = true;
+            } else {
+              titleRetries++;
+              if (titleRetries === maxRetries) updateRow(i, { titleStatus: 'error' });
+              else await new Promise(r => setTimeout(r, 1000)); // Wait 1s before retry
+            }
+          } catch {
+            titleRetries++;
+            if (titleRetries === maxRetries) updateRow(i, { titleStatus: 'error' });
+            else await new Promise(r => setTimeout(r, 1000));
+          }
         }
 
-        // Step 3: Generate AI Description
-        updateRow(i, { descriptionStatus: 'processing' });
-        const descResponse = await fetch("/api/ai/generate-text", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            prompt: `Generate a viral YouTube description with 15-20 trending hashtags for: "${currentTitle}"`
-          }),
-        });
-        const descData = await descResponse.json();
-        if (descData.description) {
-          updateRow(i, { description: descData.description, descriptionStatus: 'completed' });
-        } else if (descData.title) {
-          // Sometimes the AI returns the text in the 'title' field if it's not JSON
-          updateRow(i, { description: descData.title, descriptionStatus: 'completed' });
-        } else {
-          updateRow(i, { descriptionStatus: 'error' });
+        // Step 3: Generate AI Description (with retry)
+        if (titleGenerated) {
+          updateRow(i, { descriptionStatus: 'processing' });
+          let descGenerated = false;
+          let descRetries = 0;
+
+          while (!descGenerated && descRetries < maxRetries) {
+            try {
+              const descResponse = await fetch("/api/ai/generate-text", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  prompt: `You are a YouTube SEO expert. Generate a viral YouTube description with 15-20 trending hashtags for a video titled: "${currentTitle}". Return only the description text.`
+                }),
+              });
+              const descData = await descResponse.json();
+              if (descData.description && !descData.error) {
+                updateRow(i, { description: descData.description, descriptionStatus: 'completed' });
+                descGenerated = true;
+              } else if (descData.title && !descData.error) {
+                updateRow(i, { description: descData.title, descriptionStatus: 'completed' });
+                descGenerated = true;
+              } else {
+                descRetries++;
+                if (descRetries === maxRetries) updateRow(i, { descriptionStatus: 'error' });
+                else await new Promise(r => setTimeout(r, 1000));
+              }
+            } catch {
+              descRetries++;
+              if (descRetries === maxRetries) updateRow(i, { descriptionStatus: 'error' });
+              else await new Promise(r => setTimeout(r, 1000));
+            }
+          }
         }
 
       } catch (error) {

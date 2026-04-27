@@ -9,14 +9,20 @@ export async function POST(request: Request) {
     }
 
     const aiResponse = await generateAIText(prompt);
-    let parsed;
+    
+    // Try to parse JSON if the model followed instructions
     try {
-      parsed = JSON.parse(aiResponse);
+      const cleanJson = aiResponse.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(cleanJson);
+      return NextResponse.json(parsed);
     } catch {
-      parsed = { title: aiResponse, description: "" };
+      // Fallback: Return as title and description fields for the frontend
+      // If it's a simple string, we'll let the frontend decide how to use it
+      return NextResponse.json({ 
+        title: aiResponse, 
+        description: aiResponse 
+      });
     }
-
-    return NextResponse.json(parsed);
   } catch (error) {
     console.error("AI Route Error:", error);
     return NextResponse.json({ error: "Failed to generate AI text" }, { status: 500 });

@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx';
 export interface BulkVideoRow {
   srNo: number;
   videoLink: string;
-  visibilityType: 'Publish' | 'Schedule';
+  visibilityType: 'Public' | 'Schedule';
   scheduleDate: string; // YYYY-MM-DD
   scheduleTime: string; // HH:MM
   // Result fields
@@ -44,7 +44,7 @@ export function parseExcelFile(buffer: ArrayBuffer): BulkVideoRow[] {
 
     const yyyy = date.getFullYear();
     const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
+    const dd = String(date.getDate() + 1).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}`;
   };
 
@@ -81,7 +81,7 @@ export function parseExcelFile(buffer: ArrayBuffer): BulkVideoRow[] {
     return {
       srNo: row[srKey] || index + 1,
       videoLink: row[linkKey] || '',
-      visibilityType: String(row[visKey]).trim() === 'Schedule' ? 'Schedule' : 'Publish',
+      visibilityType: String(row[visKey]).trim() === 'Schedule' ? 'Schedule' : 'Public',
       scheduleDate: formatDate(row[dateKey]),
       scheduleTime: formatTime(row[timeKey]),
       videoStatus: 'idle',
@@ -97,7 +97,7 @@ export function generateSampleExcel() {
     {
       'Sr No': 1,
       'Video Link': 'https://www.youtube.com/watch?v=...',
-      'Visibility Type': 'Publish',
+      'Visibility Type': 'Public',
       'Schedule Date': '',
       'Schedule Time': ''
     },
