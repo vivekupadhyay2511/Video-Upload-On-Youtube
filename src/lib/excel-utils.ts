@@ -42,6 +42,9 @@ export function parseExcelFile(buffer: ArrayBuffer): BulkVideoRow[] {
 
     if (isNaN(date.getTime())) return String(val).trim();
 
+    // Avoid formatting time-only cells (Year 1899) as a date
+    if (date.getFullYear() < 1970) return "";
+
     const yyyy = date.getFullYear();
     const mm = String(date.getMonth() + 1).padStart(2, '0');
     const dd = String(date.getDate() + 1).padStart(2, '0');
@@ -50,6 +53,14 @@ export function parseExcelFile(buffer: ArrayBuffer): BulkVideoRow[] {
 
   const formatTime = (val: any): string => {
     if (!val) return '';
+
+    // Handle Date objects from XLSX (often Dec 30 1899 for time-only cells)
+    if (val instanceof Date) {
+      const hh = String(val.getHours()).padStart(2, '0');
+      const mm = String(val.getMinutes()).padStart(2, '0');
+      return `${hh}:${mm}`;
+    }
+
     if (typeof val === 'number') {
       // Excel stores time as a fraction of a 24h day (0.5 = 12:00 PM)
       const totalMinutes = Math.round(val * 24 * 60);
@@ -57,11 +68,12 @@ export function parseExcelFile(buffer: ArrayBuffer): BulkVideoRow[] {
       const minutes = totalMinutes % 60;
       return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
     }
+
     const str = String(val).trim();
-    // Validate HH:MM format
-    if (/^\d{1,2}:\d{2}$/.test(str)) {
-      const [h, m] = str.split(':');
-      return `${h.padStart(2, '0')}:${m.padStart(2, '0')}`;
+    // Validate HH:MM or HH:MM:SS format
+    if (/^\d{1,2}:\d{2}/.test(str)) {
+      const parts = str.split(':');
+      return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
     }
     return str;
   };
