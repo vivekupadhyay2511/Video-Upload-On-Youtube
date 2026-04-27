@@ -78,7 +78,8 @@ export default function Header() {
           </h2>
         </div>
 
-        <div className="header-right" style={{ position: 'relative', display: 'flex', justifyContent: 'flex-end' }}>
+        <div className="header-right" style={{ position: 'relative', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '16px' }}>
+
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             style={{
@@ -95,6 +96,7 @@ export default function Header() {
               fontWeight: 600,
               transition: 'all 0.2s ease'
             }}
+            className="menu-toggle-btn"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -107,35 +109,44 @@ export default function Header() {
           {isDropdownOpen && (
             <div style={{
               position: 'absolute',
-              top: 'calc(100% + 8px)',
+              top: 'calc(100% + 12px)',
               right: 0,
-              background: 'var(--card)',
+              background: 'rgba(23, 23, 26, 0.95)',
               border: '1px solid var(--line)',
-              borderRadius: '12px',
+              borderRadius: '16px',
               padding: '8px',
-              minWidth: '180px',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+              minWidth: '220px',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
               zIndex: 100,
-              backdropFilter: 'blur(20px)'
+              backdropFilter: 'blur(30px)',
+              animation: 'dropdownIn 0.2s ease-out'
             }}>
-              <a href="/" onClick={() => setIsDropdownOpen(false)} style={{ display: 'block', padding: '10px 12px', textDecoration: 'none', color: 'var(--text)', borderRadius: '8px', fontSize: '0.9rem' }} className="menu-item">
-                🏠 Home
+              <a href="/" onClick={() => setIsDropdownOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', textDecoration: 'none', color: 'var(--text)', borderRadius: '10px', fontSize: '0.9rem' }} className="menu-item">
+                <span style={{ fontSize: '1.1rem' }}>🏠</span> Home
               </a>
-              <a href="/upload-video-by-link" onClick={() => setIsDropdownOpen(false)} style={{ display: 'block', padding: '10px 12px', textDecoration: 'none', color: 'var(--text)', borderRadius: '8px', fontSize: '0.9rem' }} className="menu-item">
-                🔗 Upload Video By Link
+              <a href="/upload-video-by-link" onClick={() => setIsDropdownOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', textDecoration: 'none', color: 'var(--text)', borderRadius: '10px', fontSize: '0.9rem' }} className="menu-item">
+                <span style={{ fontSize: '1.1rem' }}>🚀</span> Single Video Upload
               </a>
-              <a href="/upload-multiple-video" onClick={() => setIsDropdownOpen(false)} style={{ display: 'block', padding: '10px 12px', textDecoration: 'none', color: 'var(--text)', borderRadius: '8px', fontSize: '0.9rem' }} className="menu-item">
-                📁 Upload Multiple Video
+              <a href="/upload-multiple-video" onClick={() => setIsDropdownOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', textDecoration: 'none', color: 'var(--text)', borderRadius: '10px', fontSize: '0.9rem' }} className="menu-item">
+                <span style={{ fontSize: '1.1rem' }}>📁</span> Bulk Video Upload
               </a>
-              {/* <a href="/ai-studio" onClick={() => setIsDropdownOpen(false)} style={{ display: 'block', padding: '10px 12px', textDecoration: 'none', color: 'var(--text)', borderRadius: '8px', fontSize: '0.9rem' }} className="menu-item">
-                ✨ AI Creative Studio
-              </a> */}
             </div>
           )}
           <style jsx>{`
-            .menu-item:hover {
-              background: rgba(0,0,0,0.05);
+            .nav-link:hover {
               color: var(--accent) !important;
+            }
+            .menu-item:hover {
+              background: rgba(255,255,255,0.05);
+              color: var(--accent) !important;
+            }
+            .menu-toggle-btn:hover {
+              background: rgba(255,255,255,0.1);
+              border-color: var(--accent);
+            }
+            @keyframes dropdownIn {
+              from { opacity: 0; transform: translateY(10px) scale(0.95); }
+              to { opacity: 1; transform: translateY(0) scale(1); }
             }
           `}</style>
         </div>
