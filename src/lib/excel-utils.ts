@@ -30,14 +30,17 @@ export function parseExcelFile(buffer: ArrayBuffer): BulkVideoRow[] {
 
     let date: Date;
     if (val instanceof Date) {
-      date = val;
+      date = new Date(val.getTime()); // Clone to avoid mutating
     } else if (typeof val === 'number') {
       // Excel serial date to JS Date
       date = new Date(Math.round((val - 25569) * 86400 * 1000));
     } else {
       const str = String(val).trim();
-      if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
-      date = new Date(str);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+        date = new Date(str + "T00:00:00"); // Force local start of day
+      } else {
+        date = new Date(str);
+      }
     }
 
     if (isNaN(date.getTime())) return String(val).trim();
@@ -45,9 +48,13 @@ export function parseExcelFile(buffer: ArrayBuffer): BulkVideoRow[] {
     // Avoid formatting time-only cells (Year 1899) as a date
     if (date.getFullYear() < 1970) return "";
 
+    // Add 1 day as requested by user to correct "1 day older" issue
+    // Using setDate handles month/year rollovers correctly (e.g. Apr 30 -> May 1)
+    date.setDate(date.getDate() + 1);
+
     const yyyy = date.getFullYear();
     const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}`;
   };
 
