@@ -39,72 +39,40 @@ export default function BulkUploadPage() {
   };
 
   const generateAiContentForRow = async (index: number, initialTitle: string) => {
-    let currentTitle = initialTitle;
     const maxRetries = 3;
 
-    // Step 2: Generate AI Title (with retry)
-    updateRow(index, { titleStatus: 'processing' });
-    let titleGenerated = false;
-    let titleRetries = 0;
+    updateRow(index, { titleStatus: 'processing', descriptionStatus: 'processing' });
+    let aiGenerated = false;
+    let aiRetries = 0;
 
-    while (!titleGenerated && titleRetries < maxRetries) {
+    while (!aiGenerated && aiRetries < maxRetries) {
       try {
-        const tResponse = await fetch("/api/ai/generate-text", {
+        const response = await fetch("/api/ai/generate-text", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            prompt: `You are a YouTube SEO expert. Based ON THIS TITLE: "${currentTitle}", create a RADICALLY DIFFERENT and EXTREMELY CREATIVE new viral YouTube title (MAX 100 characters). Do not repeat the input. Include 2-3 new trending hashtags. Return only the title text.`
+            prompt: `You are a YouTube SEO expert. Based ON THIS TITLE: "${initialTitle}", return ONLY a valid JSON object with two keys: "title" and "description". "title" must be a RADICALLY DIFFERENT, highly creative viral YouTube title (MAX 100 characters) including 2-3 new trending hashtags. "description" must be a unique, engaging description with 15-20 trending hashtags.`
           }),
         });
-        const tData = await tResponse.json();
-        if (tData.title && !tData.error) {
-          currentTitle = tData.title;
-          updateRow(index, { title: currentTitle, titleStatus: 'completed' });
-          titleGenerated = true;
+        const data = await response.json();
+        
+        if (data.title && data.description && !data.error) {
+          updateRow(index, { 
+            title: data.title, 
+            titleStatus: 'completed',
+            description: data.description,
+            descriptionStatus: 'completed'
+          });
+          aiGenerated = true;
         } else {
-          titleRetries++;
-          if (titleRetries === maxRetries) updateRow(index, { titleStatus: 'error' });
+          aiRetries++;
+          if (aiRetries === maxRetries) updateRow(index, { titleStatus: 'error', descriptionStatus: 'error' });
           else await new Promise(r => setTimeout(r, 1000));
         }
       } catch {
-        titleRetries++;
-        if (titleRetries === maxRetries) updateRow(index, { titleStatus: 'error' });
+        aiRetries++;
+        if (aiRetries === maxRetries) updateRow(index, { titleStatus: 'error', descriptionStatus: 'error' });
         else await new Promise(r => setTimeout(r, 1000));
-      }
-    }
-
-    // Step 3: Generate AI Description (with retry)
-    if (titleGenerated) {
-      updateRow(index, { descriptionStatus: 'processing' });
-      let descGenerated = false;
-      let descRetries = 0;
-
-      while (!descGenerated && descRetries < maxRetries) {
-        try {
-          const descResponse = await fetch("/api/ai/generate-text", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              prompt: `You are a YouTube SEO expert. Generate a high-retention, viral YouTube description with 15-20 trending hashtags for a video titled: "${currentTitle}". Make it unique and engaging. Return only the description text.`
-            }),
-          });
-          const descData = await descResponse.json();
-          if (descData.description && !descData.error) {
-            updateRow(index, { description: descData.description, descriptionStatus: 'completed' });
-            descGenerated = true;
-          } else if (descData.title && !descData.error) {
-            updateRow(index, { description: descData.title, descriptionStatus: 'completed' });
-            descGenerated = true;
-          } else {
-            descRetries++;
-            if (descRetries === maxRetries) updateRow(index, { descriptionStatus: 'error' });
-            else await new Promise(r => setTimeout(r, 1000));
-          }
-        } catch {
-          descRetries++;
-          if (descRetries === maxRetries) updateRow(index, { descriptionStatus: 'error' });
-          else await new Promise(r => setTimeout(r, 1000));
-        }
       }
     }
   };

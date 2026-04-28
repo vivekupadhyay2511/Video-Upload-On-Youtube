@@ -12,15 +12,24 @@ export async function POST(request: Request) {
     
     // Try to parse JSON if the model followed instructions
     try {
-      const cleanJson = aiResponse.replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(cleanJson);
-      return NextResponse.json(parsed);
+      // Use regex to extract JSON object from potentially messy response
+      const match = aiResponse.match(/\{[\s\S]*\}/);
+      if (match) {
+        const parsed = JSON.parse(match[0]);
+        if (parsed.title || parsed.description) {
+          return NextResponse.json({
+            title: parsed.title || "",
+            description: parsed.description || ""
+          });
+        }
+      }
+      throw new Error("No valid JSON structure found in response");
     } catch {
-      // Fallback: Return as title and description fields for the frontend
-      // If it's a simple string, we'll let the frontend decide how to use it
+      // Fallback: If it's a simple string, put it all in the description and 
+      // let the user extract the title manually, rather than duplicating it.
       return NextResponse.json({ 
-        title: aiResponse, 
-        description: aiResponse 
+        title: "", 
+        description: aiResponse.trim()
       });
     }
   } catch (error) {
