@@ -38,6 +38,77 @@ export default function BulkUploadPage() {
     });
   };
 
+  const generateAiContentForRow = async (index: number, initialTitle: string) => {
+    let currentTitle = initialTitle;
+    const maxRetries = 3;
+
+    // Step 2: Generate AI Title (with retry)
+    updateRow(index, { titleStatus: 'processing' });
+    let titleGenerated = false;
+    let titleRetries = 0;
+
+    while (!titleGenerated && titleRetries < maxRetries) {
+      try {
+        const tResponse = await fetch("/api/ai/generate-text", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt: `You are a YouTube SEO expert. Based ON THIS TITLE: "${currentTitle}", create a RADICALLY DIFFERENT and EXTREMELY CREATIVE new viral YouTube title (MAX 100 characters). Do not repeat the input. Include 2-3 new trending hashtags. Return only the title text.`
+          }),
+        });
+        const tData = await tResponse.json();
+        if (tData.title && !tData.error) {
+          currentTitle = tData.title;
+          updateRow(index, { title: currentTitle, titleStatus: 'completed' });
+          titleGenerated = true;
+        } else {
+          titleRetries++;
+          if (titleRetries === maxRetries) updateRow(index, { titleStatus: 'error' });
+          else await new Promise(r => setTimeout(r, 1000));
+        }
+      } catch {
+        titleRetries++;
+        if (titleRetries === maxRetries) updateRow(index, { titleStatus: 'error' });
+        else await new Promise(r => setTimeout(r, 1000));
+      }
+    }
+
+    // Step 3: Generate AI Description (with retry)
+    if (titleGenerated) {
+      updateRow(index, { descriptionStatus: 'processing' });
+      let descGenerated = false;
+      let descRetries = 0;
+
+      while (!descGenerated && descRetries < maxRetries) {
+        try {
+          const descResponse = await fetch("/api/ai/generate-text", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              prompt: `You are a YouTube SEO expert. Generate a high-retention, viral YouTube description with 15-20 trending hashtags for a video titled: "${currentTitle}". Make it unique and engaging. Return only the description text.`
+            }),
+          });
+          const descData = await descResponse.json();
+          if (descData.description && !descData.error) {
+            updateRow(index, { description: descData.description, descriptionStatus: 'completed' });
+            descGenerated = true;
+          } else if (descData.title && !descData.error) {
+            updateRow(index, { description: descData.title, descriptionStatus: 'completed' });
+            descGenerated = true;
+          } else {
+            descRetries++;
+            if (descRetries === maxRetries) updateRow(index, { descriptionStatus: 'error' });
+            else await new Promise(r => setTimeout(r, 1000));
+          }
+        } catch {
+          descRetries++;
+          if (descRetries === maxRetries) updateRow(index, { descriptionStatus: 'error' });
+          else await new Promise(r => setTimeout(r, 1000));
+        }
+      }
+    }
+  };
+
   const generateAllContent = async () => {
     setGlobalLoading("Processing All Content...");
     for (let i = 0; i < rows.length; i++) {
@@ -61,81 +132,15 @@ export default function BulkUploadPage() {
             previewUrl: dData.previewUrl,
             title: currentTitle
           });
+          
+          // Generate AI content using our reusable function
+          await generateAiContentForRow(i, currentTitle);
         } else {
           updateRow(i, { videoStatus: 'error', message: dData.message });
-          // If download fails, we can still try to generate content if a title exists, 
-          // but usually we want the download to succeed. 
-          // However, let's continue if we have a title.
-          if (!currentTitle) continue;
-        }
-
-        // Step 2: Generate AI Title (with retry)
-        updateRow(i, { titleStatus: 'processing' });
-        let titleGenerated = false;
-        let titleRetries = 0;
-        const maxRetries = 3;
-
-        while (!titleGenerated && titleRetries < maxRetries) {
-          try {
-            const tResponse = await fetch("/api/ai/generate-text", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                prompt: `You are a YouTube SEO expert. Generate a catchy, viral YouTube title (MAX 100 characters) including 2-3 viral hashtags at the end for this video: "${currentTitle}". Return only the title text.`
-              }),
-            });
-            const tData = await tResponse.json();
-            if (tData.title && !tData.error) {
-              currentTitle = tData.title;
-              updateRow(i, { title: currentTitle, titleStatus: 'completed' });
-              titleGenerated = true;
-            } else {
-              titleRetries++;
-              if (titleRetries === maxRetries) updateRow(i, { titleStatus: 'error' });
-              else await new Promise(r => setTimeout(r, 1000)); // Wait 1s before retry
-            }
-          } catch {
-            titleRetries++;
-            if (titleRetries === maxRetries) updateRow(i, { titleStatus: 'error' });
-            else await new Promise(r => setTimeout(r, 1000));
+          if (currentTitle) {
+            await generateAiContentForRow(i, currentTitle);
           }
         }
-
-        // Step 3: Generate AI Description (with retry)
-        if (titleGenerated) {
-          updateRow(i, { descriptionStatus: 'processing' });
-          let descGenerated = false;
-          let descRetries = 0;
-
-          while (!descGenerated && descRetries < maxRetries) {
-            try {
-              const descResponse = await fetch("/api/ai/generate-text", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  prompt: `You are a YouTube SEO expert. Generate a viral YouTube description with 15-20 trending hashtags for a video titled: "${currentTitle}". Return only the description text.`
-                }),
-              });
-              const descData = await descResponse.json();
-              if (descData.description && !descData.error) {
-                updateRow(i, { description: descData.description, descriptionStatus: 'completed' });
-                descGenerated = true;
-              } else if (descData.title && !descData.error) {
-                updateRow(i, { description: descData.title, descriptionStatus: 'completed' });
-                descGenerated = true;
-              } else {
-                descRetries++;
-                if (descRetries === maxRetries) updateRow(i, { descriptionStatus: 'error' });
-                else await new Promise(r => setTimeout(r, 1000));
-              }
-            } catch {
-              descRetries++;
-              if (descRetries === maxRetries) updateRow(i, { descriptionStatus: 'error' });
-              else await new Promise(r => setTimeout(r, 1000));
-            }
-          }
-        }
-
       } catch (error) {
         console.error("Row processing error:", error);
         updateRow(i, { videoStatus: 'error', message: 'Process failed' });
@@ -144,38 +149,63 @@ export default function BulkUploadPage() {
     setGlobalLoading(null);
   };
 
+  const regenerateRowAi = async (index: number) => {
+    const row = rows[index];
+    // Use the latest title from the state
+    const currentTitle = row.title || ("Video " + row.srNo);
+    
+    // Clear previous statuses to show it's starting fresh
+    updateRow(index, { titleStatus: 'idle', descriptionStatus: 'idle' });
+    
+    await generateAiContentForRow(index, currentTitle);
+  };
+
+  const uploadRowToYoutube = async (index: number) => {
+    const row = rows[index];
+    if (!row.videoLink || !row.previewUrl) return;
+    
+    updateRow(index, { uploadStatus: 'processing', message: 'Uploading...' });
+
+    try {
+      const uploadTitle = String(row.title || "").trim();
+      const isScheduled = row.visibilityType === 'Schedule';
+      const response = await fetch("/api/process-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sourceUrl: String(row.videoLink),
+          title: uploadTitle.length >= 3 ? uploadTitle : `Video ${row.srNo}`,
+          description: String(row.description || ""),
+          privacyStatus: isScheduled ? 'private' : 'public',
+          scheduleDate: isScheduled ? String(row.scheduleDate || "") : "",
+          scheduleTime: isScheduled ? String(row.scheduleTime || "") : ""
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        updateRow(index, { uploadStatus: 'completed', message: 'Uploaded' });
+      } else {
+        updateRow(index, { uploadStatus: 'error', message: data.message });
+      }
+    } catch {
+      updateRow(index, { uploadStatus: 'error', message: 'Upload failed' });
+    }
+  };
+
   const uploadAllToYoutube = async () => {
     setGlobalLoading("Uploading to YouTube...");
     for (let i = 0; i < rows.length; i++) {
       if (!rows[i].videoLink || !rows[i].previewUrl) continue;
-      updateRow(i, { uploadStatus: 'processing', message: 'Uploading...' });
-
-      try {
-        const uploadTitle = String(rows[i].title || "").trim();
-        const isScheduled = rows[i].visibilityType === 'Schedule';
-        const response = await fetch("/api/process-video", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sourceUrl: String(rows[i].videoLink),
-            title: uploadTitle.length >= 3 ? uploadTitle : `Video ${rows[i].srNo}`,
-            description: String(rows[i].description || ""),
-            privacyStatus: isScheduled ? 'private' : 'public',
-            scheduleDate: isScheduled ? String(rows[i].scheduleDate || "") : "",
-            scheduleTime: isScheduled ? String(rows[i].scheduleTime || "") : ""
-          }),
-        });
-        const data = await response.json();
-        if (data.success) {
-          updateRow(i, { uploadStatus: 'completed', message: 'Uploaded' });
-        } else {
-          updateRow(i, { uploadStatus: 'error', message: data.message });
-        }
-      } catch {
-        updateRow(i, { uploadStatus: 'error', message: 'Upload failed' });
-      }
+      // Skip already uploaded
+      if (rows[i].uploadStatus === 'completed') continue;
+      
+      await uploadRowToYoutube(i);
     }
     setGlobalLoading(null);
+  };
+
+  const reuploadRow = (index: number) => {
+    uploadRowToYoutube(index);
   };
 
   return (
@@ -231,6 +261,7 @@ export default function BulkUploadPage() {
                   <th>YouTube Title</th>
                   <th>YouTube Description</th>
                   <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -273,6 +304,26 @@ export default function BulkUploadPage() {
                         {row.message || "Idle"}
                       </div>
                     </td>
+                    <td>
+                       <div className="action-buttons">
+                         <button 
+                           className="reload-btn" 
+                           title="Regenerate Title & Description"
+                           onClick={() => regenerateRowAi(index)}
+                           disabled={!!globalLoading || row.titleStatus === 'processing'}
+                         >
+                           🔄
+                         </button>
+                         <button 
+                           className="reupload-btn" 
+                           title="Upload / Reupload to YouTube"
+                           onClick={() => reuploadRow(index)}
+                           disabled={!!globalLoading || row.uploadStatus === 'processing'}
+                         >
+                           📤
+                         </button>
+                       </div>
+                     </td>
                   </tr>
                 ))}
               </tbody>
@@ -400,6 +451,48 @@ export default function BulkUploadPage() {
           border-radius: 50%;
           border-top-color: #7c3aed;
           animation: ai-spin 0.8s linear infinite;
+        }
+
+        .action-buttons {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+        }
+
+        .reload-btn, .reupload-btn {
+          background: rgba(124, 58, 237, 0.1);
+          border: 1px solid rgba(124, 58, 237, 0.2);
+          border-radius: 50%;
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          font-size: 1rem;
+        }
+
+        .reupload-btn {
+          background: rgba(22, 163, 74, 0.1);
+          border-color: rgba(22, 163, 74, 0.2);
+        }
+
+        .reload-btn:hover:not(:disabled) {
+          background: rgba(124, 58, 237, 0.2);
+          border-color: #7c3aed;
+          transform: rotate(180deg);
+        }
+
+        .reupload-btn:hover:not(:disabled) {
+          background: rgba(22, 163, 74, 0.2);
+          border-color: #16a34a;
+          transform: translateY(-2px);
+        }
+
+        .reload-btn:disabled, .reupload-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
 
         .placeholder-text {
