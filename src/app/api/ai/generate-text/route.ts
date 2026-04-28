@@ -25,8 +25,18 @@ export async function POST(request: Request) {
       }
       throw new Error("No valid JSON structure found in response");
     } catch {
-      // Fallback: If it's a simple string, put it all in the description and 
-      // let the user extract the title manually, rather than duplicating it.
+      // Fallback: Try to extract using standard text patterns
+      const titleMatch = aiResponse.match(/Title:\s*(.*)/i);
+      const descMatch = aiResponse.match(/Description:\s*([\s\S]*)/i);
+      
+      if (titleMatch && descMatch) {
+        return NextResponse.json({
+          title: titleMatch[1].trim().replace(/^"|"$/g, ''),
+          description: descMatch[1].trim()
+        });
+      }
+
+      // Final Fallback: Put it all in the description and let the user extract the title manually
       return NextResponse.json({ 
         title: "", 
         description: aiResponse.trim()

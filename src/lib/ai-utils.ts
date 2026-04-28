@@ -7,7 +7,7 @@ export async function generateAIText(prompt: string): Promise<string> {
     const encodedPrompt = encodeURIComponent(prompt);
     // Use a random seed in the URL to force the model to provide a fresh response
     const seed = Math.floor(Math.random() * 1000000);
-    const url = `https://text.pollinations.ai/${encodedPrompt}?model=openai&cache=false&seed=${seed}&json=true`;
+    const url = `https://text.pollinations.ai/${encodedPrompt}?model=openai&cache=false&seed=${seed}`;
     
     const response = await fetch(url);
     if (!response.ok) throw new Error("AI Service unavailable");
