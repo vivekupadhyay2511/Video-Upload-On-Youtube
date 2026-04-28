@@ -49,6 +49,7 @@ export async function getVideoInfo(sourceUrl: string) {
     dumpJson: true,
     noWarnings: true,
     noCheckCertificates: true,
+    extractorArgs: "youtube:player-client=ios,android,web",
   });
   return info as any;
 }
@@ -84,6 +85,7 @@ export async function downloadSourceVideo(sourceUrl: string) {
     restrictFilenames: true,
     format: "mp4/bestvideo+bestaudio/best",
     mergeOutputFormat: "mp4",
+    extractorArgs: "youtube:player-client=ios,android,web",
   });
 
   const downloadedFiles = await readdir(downloadDir);

@@ -4,13 +4,26 @@
 
 export async function generateAIText(prompt: string): Promise<string> {
   try {
-    const encodedPrompt = encodeURIComponent(prompt);
-    // Use a random seed in the URL to force the model to provide a fresh response
     const seed = Math.floor(Math.random() * 1000000);
-    const url = `https://text.pollinations.ai/${encodedPrompt}?model=openai&cache=false&seed=${seed}`;
+    const url = "https://text.pollinations.ai/";
     
-    const response = await fetch(url);
-    if (!response.ok) throw new Error("AI Service unavailable");
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: prompt }],
+        model: "openai",
+        seed: seed,
+        cache: false
+      })
+    });
+
+    if (!response.ok) {
+      console.error(`Pollinations API Error: ${response.status} ${response.statusText}`);
+      throw new Error("AI Service unavailable");
+    }
     
     const text = await response.text();
     if (!text) throw new Error("Empty AI response");
