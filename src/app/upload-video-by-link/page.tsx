@@ -39,6 +39,8 @@ export default function UploadVideoPage() {
   const [activeAction, setActiveAction] = useState<"download" | "upload" | null>(null);
   const [result, setResult] = useState<ProcessResponse | null>(null);
   const [isAiGenerating, setIsAiGenerating] = useState(false);
+  const [isCropping, setIsCropping] = useState(false);
+  const [previewKey, setPreviewKey] = useState(0);
 
   const generateAllContentWithAi = async () => {
     if (!title) return;
@@ -48,7 +50,7 @@ export default function UploadVideoPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          prompt: `You are a YouTube SEO expert. Based on the video title: "${title}", return ONLY a valid JSON object with two keys: "title" and "description". "title" must be a catchy, viral YouTube title (MAX 100 characters) including 2-3 hashtags. "description" must be a detailed description with a viral message and 15-20 trending hashtags.` 
+          prompt: `You are a YouTube SEO expert. Based on the video title: "${title}", return ONLY a valid JSON object with two keys: "title" and "description". "title" must be a catchy, viral YouTube title (MAX 100 characters) including 2-3 hashtags. "description" must be a detailed description with a viral message and 15-20 trending hashtags. All generated hashtags MUST be strictly lowercase.` 
         }),
       });
       const data = await response.json();
@@ -108,7 +110,7 @@ export default function UploadVideoPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ 
-            prompt: `You are a YouTube SEO expert. Based on the video title: "${data.title}", return ONLY a valid JSON object with two keys: "title" and "description". "title" must be a catchy, viral YouTube title (MAX 100 characters) including 2-3 hashtags. "description" must be a detailed description with a viral message and 15-20 trending hashtags.` 
+            prompt: `You are a YouTube SEO expert. Based on the video title: "${data.title}", return ONLY a valid JSON object with two keys: "title" and "description". "title" must be a catchy, viral YouTube title (MAX 100 characters) including 2-3 hashtags. "description" must be a detailed description with a viral message and 15-20 trending hashtags. All generated hashtags MUST be strictly lowercase.` 
           }),
         }).then(res => res.json()).then(aiData => {
           if (aiData.title) setTitle(aiData.title);
@@ -119,6 +121,35 @@ export default function UploadVideoPage() {
       setResult({ success: false, message: "Something went wrong while sending the request." });
     } finally {
       setActiveAction(null);
+    }
+  };
+
+  const handleCrop = async () => {
+    if (!result?.previewUrl) return;
+    
+    const urlParts = result.previewUrl.split('/');
+    const downloadId = urlParts[urlParts.length - 1]?.split('?')[0];
+    
+    if (!downloadId) return;
+
+    setIsCropping(true);
+    try {
+      const response = await fetch("/api/crop-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ downloadId }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setPreviewKey(prev => prev + 1);
+      } else {
+        alert(data.message || "Failed to crop video.");
+      }
+    } catch (error) {
+      console.error("Crop error:", error);
+      alert("An error occurred while cropping the video.");
+    } finally {
+      setIsCropping(false);
     }
   };
 
@@ -296,12 +327,23 @@ export default function UploadVideoPage() {
             {/* Right Side: Video Preview */}
             <div className="download-right">
               <div style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--line)', borderRadius: '16px', padding: '12px', position: 'sticky', top: '24px' }}>
-                <p style={{ margin: '0 0 12px', fontSize: '0.85rem', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>Video Preview</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Video Preview</p>
+                  <button
+                    type="button"
+                    onClick={handleCrop}
+                    disabled={isCropping}
+                    className="secondary-btn"
+                    style={{ padding: '6px 12px', fontSize: '0.8rem', borderRadius: '8px' }}
+                  >
+                    {isCropping ? "✂️ Cropping..." : "✂️ Crop Last 2s"}
+                  </button>
+                </div>
                 <video 
                   className="fixed-height-preview"
                   controls 
-                  src={result.previewUrl} 
-                  key={result.previewUrl} 
+                  src={`${result.previewUrl}?t=${previewKey}`} 
+                  key={`${result.previewUrl}-${previewKey}`} 
                   style={{ boxShadow: '0 10px 30px rgba(0,0,0,0.5)', width: '100%', height: 'auto', maxHeight: '400px' }}
                 />
               </div>

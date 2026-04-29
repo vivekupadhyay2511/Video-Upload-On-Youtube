@@ -51,7 +51,7 @@ export default function BulkUploadPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            prompt: `You are a YouTube SEO expert. Based ON THIS TITLE: "${initialTitle}", return ONLY a raw JSON object with two keys: "title" and "description". Do not use markdown blocks like \`\`\`json. Do not include any other text. Escape any double quotes inside the description. "title" must be a highly creative viral YouTube title (MAX 100 characters) with 2-3 new trending hashtags. "description" must be an engaging description with 15-20 trending hashtags.`
+            prompt: `You are a YouTube SEO expert. Based ON THIS TITLE: "${initialTitle}", return ONLY a raw JSON object with two keys: "title" and "description". Do not use markdown blocks like \`\`\`json. Do not include any other text. Escape any double quotes inside the description. "title" must be a highly creative viral YouTube title (MAX 100 characters) with 2-3 new trending hashtags. "description" must be an engaging description with 15-20 trending hashtags. All generated hashtags MUST be strictly lowercase.`
           }),
         });
         const data = await response.json();
