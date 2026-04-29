@@ -12,7 +12,151 @@ interface MusicTrack {
 interface ClipItem {
   file: File;
   rotation: number;
+  isLandscape?: boolean;
 }
+
+// Sub-component for individual timeline items to isolate orientation state updates
+const TimelineItem = ({ 
+  item, 
+  index, 
+  aspectRatio, 
+  draggedIndex, 
+  dragOverIndex, 
+  handleDragStart, 
+  handleDragOver, 
+  handleDragEnd, 
+  handleDrop, 
+  removeClip, 
+  rotateClip, 
+  url,
+  setClips
+}: any) => {
+  const blockAspectRatio = aspectRatio === '16:9' ? '16 / 9' : '9 / 16';
+  const blockWidth = aspectRatio === '16:9' ? '260px' : '90px';
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+      {/* Drop Indicator - Left */}
+      {dragOverIndex === index && draggedIndex !== null && draggedIndex > index && (
+        <div style={{ width: '4px', height: '80%', background: 'var(--accent)', borderRadius: '4px', boxShadow: '0 0 15px var(--accent)', margin: '0 8px', transition: 'all 0.2s' }}></div>
+      )}
+
+      <div
+        draggable="true"
+        onDragStart={() => handleDragStart(index)}
+        onDragOver={(e) => handleDragOver(e, index)}
+        onDragEnd={handleDragEnd}
+        onDrop={() => handleDrop(index)}
+        style={{
+          width: blockWidth,
+          aspectRatio: blockAspectRatio,
+          background: 'rgba(255,255,255,0.05)',
+          borderRadius: '12px',
+          border: `2px solid ${draggedIndex === index ? 'var(--accent)' : 'var(--line)'}`,
+          position: 'relative',
+          overflow: 'hidden',
+          cursor: 'grab',
+          transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+          transform: draggedIndex === index ? 'scale(0.95)' : 'scale(1)',
+          boxShadow: draggedIndex === index ? '0 0 20px rgba(99, 102, 241, 0.3)' : 'none',
+          flexShrink: 0
+        }}
+      >
+        <div style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(0,0,0,0.7)', padding: '4px 8px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800, zIndex: 2 }}>{index + 1}</div>
+
+        {/* Top Controls: Delete */}
+        <button
+          onClick={(e) => { e.stopPropagation(); removeClip(index); }}
+          style={{ 
+            position: 'absolute', 
+            top: '6px', 
+            right: '6px', 
+            background: '#ef4444', 
+            border: '2px solid rgba(255,255,255,0.2)', 
+            color: '#fff', 
+            width: '26px', 
+            height: '26px', 
+            borderRadius: '50%', 
+            cursor: 'pointer', 
+            zIndex: 10, 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            fontSize: '0.75rem', 
+            fontWeight: 800,
+            boxShadow: '0 4px 12px rgba(239, 68, 68, 0.4)',
+            transition: 'transform 0.2s'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+          onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          ✕
+        </button>
+
+        {/* Bottom Controls: Rotate */}
+        <button
+          onClick={(e) => { e.stopPropagation(); rotateClip(index); }}
+          style={{
+            position: 'absolute',
+            bottom: '32px',
+            right: '8px',
+            background: 'var(--accent)',
+            border: 'none',
+            color: '#fff',
+            width: '28px',
+            height: '28px',
+            borderRadius: '50%',
+            cursor: 'pointer',
+            zIndex: 4,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 4px 15px rgba(99, 102, 241, 0.4)',
+            transition: 'transform 0.2s ease'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1) rotate(15deg)'}
+          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+        </button>
+
+        {url ? (
+          <video
+            src={url}
+            onLoadedMetadata={(e) => {
+              const video = e.currentTarget;
+              const isLand = video.videoWidth > video.videoHeight;
+              if (item.isLandscape === undefined) {
+                setClips((prev: any) => prev.map((c: any, i: number) => i === index ? { ...c, isLandscape: isLand } : c));
+              }
+            }}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              pointerEvents: 'none',
+              transform: `rotate(${item.rotation + (aspectRatio === '9:16' && item.isLandscape ? 90 : 0)}deg) scale(${aspectRatio === '9:16' && item.isLandscape ? 1.8 : 1})`,
+              transition: 'transform 0.4s ease'
+            }}
+          />
+        ) : (
+          <div style={{ width: '100%', height: '100%', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>Loading...</span>
+          </div>
+        )}
+
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '10px', fontSize: '0.65rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', background: 'linear-gradient(transparent, rgba(0,0,0,0.8))', color: '#fff' }}>
+          {item.file.name}
+        </div>
+      </div>
+
+      {/* Drop Indicator - Right */}
+      {dragOverIndex === index && draggedIndex !== null && draggedIndex < index && (
+        <div style={{ width: '4px', height: '100%', background: 'var(--accent)', borderRadius: '4px', boxShadow: '0 0 15px var(--accent)', margin: '0 8px', transition: 'all 0.2s' }}></div>
+      )}
+    </div>
+  );
+};
 
 export default function VideoEditorPage() {
   const [clips, setClips] = useState<ClipItem[]>([]);
@@ -22,6 +166,8 @@ export default function VideoEditorPage() {
   const [selectedMusicUrl, setSelectedMusicUrl] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
+  const [captionText, setCaptionText] = useState("");
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
 
@@ -106,6 +252,32 @@ export default function VideoEditorPage() {
 
   const [aiStyle, setAiStyle] = useState<string>("Viral");
 
+  const suggestCaption = async () => {
+    if (clips.length === 0) return;
+    setIsSuggesting(true);
+    setErrorMessage(null);
+    try {
+      const formData = new FormData();
+      formData.append("clip", clips[0].file);
+      formData.append("style", aiStyle);
+
+      const res = await fetch("/api/video/suggest-hook", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCaptionText(data.caption);
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (err: any) {
+      setErrorMessage("Suggestion failed: " + err.message);
+    } finally {
+      setIsSuggesting(false);
+    }
+  };
+
   const handleGenerate = async () => {
     if (clips.length === 0) {
       setErrorMessage("Please upload at least one video clip.");
@@ -144,7 +316,8 @@ export default function VideoEditorPage() {
           useAiCaption,
           aiStyle,
           musicUrl: selectedMusicUrl || undefined,
-          rotations: clips.map(c => c.rotation)
+          rotations: clips.map(c => c.rotation),
+          customCaption: captionText
         }),
       });
 
@@ -188,14 +361,14 @@ export default function VideoEditorPage() {
   }, [isUploading, isGenerating]);
 
   return (
-    <main className="page-shell" style={{ padding: '20px', height: '100vh', overflow: 'hidden' }}>
-      <div style={{ width: '100%', maxWidth: '1800px', height: '100%', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <main className="page-shell" style={{ padding: '12px', height: '100vh', overflow: 'hidden' }}>
+      <div style={{ width: '100%', maxWidth: '1800px', height: '100%', display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
         {/* Top Header Section */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h1 className="gradient-text" style={{ fontSize: '1.8rem', margin: 0 }}>AI Creative Studio</h1>
-            <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>Engineered for Viral content generation</p>
+            <h1 className="gradient-text" style={{ fontSize: '1.4rem', margin: 0 }}>AI Creative Studio</h1>
+            <p style={{ color: 'var(--muted)', fontSize: '0.75rem' }}>Pro-Workflow Interface</p>
           </div>
           <div style={{ display: 'flex', gap: '12px' }}>
             {errorMessage && (
@@ -207,25 +380,25 @@ export default function VideoEditorPage() {
               onClick={handleGenerate}
               disabled={isUploading || isGenerating || clips.length === 0}
               className="primary-action"
-              style={{ height: '44px', padding: '0 24px' }}
+              style={{ height: '36px', padding: '0 16px', fontSize: '0.8rem' }}
             >
-              {isUploading ? "Uploading..." : isGenerating ? "Processing..." : "Export Final Video"}
+              {isUploading ? "Uploading..." : isGenerating ? "Processing..." : "Export Video"}
             </button>
           </div>
         </div>
 
         {/* Main Content Area: Split Screen */}
-        <div style={{ display: 'flex', flex: 1, gap: '20px', minHeight: 0 }}>
+        <div style={{ display: 'flex', flex: 1, gap: '12px', minHeight: 0 }}>
 
           {/* Left Panel: AI Configuration */}
-          <div className="hero-card" style={{ width: '250px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto', flexShrink: 0 }}>
+          <div className="hero-card" style={{ width: '210px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', flexShrink: 0 }}>
 
             <section>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 700, fontSize: '0.75rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>1. Upload Assets</label>
+              <label style={{ display: 'block', marginBottom: '6px', fontWeight: 700, fontSize: '0.65rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>1. Upload Assets</label>
               <div style={{
                 border: '1px dashed var(--line)',
-                borderRadius: '10px',
-                padding: '16px',
+                borderRadius: '8px',
+                padding: '12px',
                 textAlign: 'center',
                 background: 'rgba(255,255,255,0.02)',
                 position: 'relative',
@@ -238,8 +411,8 @@ export default function VideoEditorPage() {
                   onChange={handleFileChange}
                   style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
                 />
-                <div style={{ fontSize: '1.2rem', marginBottom: '4px' }}>🎥</div>
-                <div style={{ fontWeight: 600, fontSize: '0.8rem' }}>Add Media</div>
+                <div style={{ fontSize: '1rem', marginBottom: '2px' }}>🎥</div>
+                <div style={{ fontWeight: 600, fontSize: '0.7rem' }}>Add Media</div>
               </div>
             </section>
 
@@ -304,26 +477,30 @@ export default function VideoEditorPage() {
                 {isMusicBrowserOpen && (
                   <div className="hero-card animate-in" style={{
                     position: 'absolute',
-                    bottom: 'calc(100% + 10px)',
+                    top: 'calc(100% + 6px)',
                     left: 0,
                     right: 0,
                     maxHeight: '350px',
-                    zIndex: 100,
-                    padding: '8px',
+                    zIndex: 999,
+                    padding: '6px',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '4px',
-                    boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
-                    overflowY: 'auto'
+                    gap: '2px',
+                    boxShadow: '0 15px 45px rgba(0,0,0,0.8)',
+                    overflowY: 'auto',
+                    background: '#16161a', // Solid dark background
+                    border: '1px solid var(--accent)'
                   }}>
                     <div
+                      className="music-row"
                       onClick={() => { setSelectedMusicUrl(""); setIsMusicBrowserOpen(false); }}
                       style={{
-                        padding: '10px',
-                        borderRadius: '8px',
+                        padding: '8px 10px',
+                        borderRadius: '6px',
                         background: selectedMusicUrl === "" ? 'var(--accent-glow)' : 'transparent',
                         cursor: 'pointer',
-                        fontSize: '0.8rem'
+                        fontSize: '0.75rem',
+                        transition: 'all 0.2s'
                       }}
                     >
                       🔇 Original Audio Only
@@ -332,16 +509,17 @@ export default function VideoEditorPage() {
                     {trendingMusic.map(track => (
                       <div
                         key={track.id}
+                        className="music-row"
                         onClick={() => { setSelectedMusicUrl(track.url); setIsMusicBrowserOpen(false); }}
                         style={{
-                          padding: '10px',
-                          borderRadius: '8px',
-                          background: selectedMusicUrl === track.url ? 'var(--accent-glow)' : 'rgba(255,255,255,0.02)',
+                          padding: '8px 10px',
+                          borderRadius: '6px',
+                          background: selectedMusicUrl === track.url ? 'var(--accent-glow)' : 'transparent',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
                           cursor: 'pointer',
-                          transition: 'background 0.2s'
+                          transition: 'all 0.2s'
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
@@ -374,10 +552,39 @@ export default function VideoEditorPage() {
               </div>
             </section>
 
-            <section>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '10px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid var(--line)' }}>
-                <input type="checkbox" checked={useAiCaption} onChange={(e) => setUseAiCaption(e.target.checked)} style={{ width: '14px', height: '14px' }} />
-                <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>AI Auto-Captions</span>
+            <section style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label style={{ fontWeight: 700, fontSize: '0.65rem', color: 'var(--muted)', textTransform: 'uppercase' }}>5. Viral Caption Hook</label>
+                <button
+                  onClick={suggestCaption}
+                  disabled={isSuggesting || clips.length === 0}
+                  style={{ fontSize: '0.6rem', background: 'var(--accent-glow)', border: '1px solid var(--accent)', color: '#fff', padding: '2px 8px', borderRadius: '4px', cursor: 'pointer' }}
+                >
+                  {isSuggesting ? "Analyzing..." : "✨ AI Idea"}
+                </button>
+              </div>
+
+              <textarea
+                value={captionText}
+                onChange={(e) => setCaptionText(e.target.value)}
+                placeholder="AI will generate a hook, or type your own..."
+                style={{
+                  width: '100%',
+                  height: '60px',
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid var(--line)',
+                  borderRadius: '8px',
+                  padding: '8px',
+                  fontSize: '0.75rem',
+                  color: '#fff',
+                  resize: 'none',
+                  outline: 'none'
+                }}
+              />
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '6px', marginTop: '4px' }}>
+                <input type="checkbox" checked={useAiCaption} onChange={(e) => setUseAiCaption(e.target.checked)} style={{ width: '12px', height: '12px' }} />
+                <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--muted)' }}>Burn Caption into Video</span>
               </label>
             </section>
           </div>
@@ -436,10 +643,10 @@ export default function VideoEditorPage() {
         </div>
 
         {/* Bottom Panel: Timeline */}
-        <div className="hero-card" style={{ height: '220px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div className="hero-card" style={{ height: '230px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase' }}>Sequencer / Timeline ({clips.length} Clips)</span>
-            <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>Drag assets to rearrange sequence</span>
+            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase' }}>Sequencer / Timeline ({clips.length} Clips)</span>
+            <span style={{ fontSize: '0.65rem', color: 'var(--muted)' }}>Drag to rearrange</span>
           </div>
 
           <div style={{
@@ -458,103 +665,23 @@ export default function VideoEditorPage() {
             ) : (
               clips.map((item, index) => {
                 const url = objectUrls[`${item.file.name}-${item.file.size}`];
-                const blockAspectRatio = aspectRatio === '16:9' ? '16 / 9' : '9 / 16';
-                const blockWidth = aspectRatio === '16:9' ? '260px' : '90px';
-
                 return (
-                  <div key={`${item.file.name}-${index}`} style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
-
-                    {/* Drop Indicator - Left */}
-                    {dragOverIndex === index && draggedIndex !== null && draggedIndex > index && (
-                      <div style={{ width: '4px', height: '80%', background: 'var(--accent)', borderRadius: '4px', boxShadow: '0 0 15px var(--accent)', margin: '0 8px', transition: 'all 0.2s' }}></div>
-                    )}
-
-                    <div
-                      draggable="true"
-                      onDragStart={() => handleDragStart(index)}
-                      onDragOver={(e) => handleDragOver(e, index)}
-                      onDragEnd={handleDragEnd}
-                      onDrop={() => handleDrop(index)}
-                      style={{
-                        width: blockWidth,
-                        aspectRatio: blockAspectRatio,
-                        background: 'rgba(255,255,255,0.05)',
-                        borderRadius: '12px',
-                        border: `2px solid ${draggedIndex === index ? 'var(--accent)' : 'var(--line)'}`,
-                        position: 'relative',
-                        overflow: 'hidden',
-                        cursor: 'grab',
-                        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                        transform: draggedIndex === index ? 'scale(0.95)' : 'scale(1)',
-                        boxShadow: draggedIndex === index ? '0 0 20px rgba(99, 102, 241, 0.3)' : 'none',
-                        flexShrink: 0
-                      }}
-                    >
-                      <div style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(0,0,0,0.7)', padding: '4px 8px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 800, zIndex: 2 }}>{index + 1}</div>
-
-                      {/* Top Controls: Delete */}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); removeClip(index); }}
-                        style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(239, 68, 68, 0.8)', border: 'none', color: '#fff', width: '24px', height: '24px', borderRadius: '6px', cursor: 'pointer', zIndex: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800 }}
-                      >
-                        ✕
-                      </button>
-
-                      {/* Bottom Controls: Rotate */}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); rotateClip(index); }}
-                        style={{
-                          position: 'absolute',
-                          bottom: '32px',
-                          right: '8px',
-                          background: 'var(--accent)',
-                          border: 'none',
-                          color: '#fff',
-                          width: '28px',
-                          height: '28px',
-                          borderRadius: '50%',
-                          cursor: 'pointer',
-                          zIndex: 4,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          boxShadow: '0 4px 15px rgba(99, 102, 241, 0.4)',
-                          transition: 'transform 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
-                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-                      </button>
-
-                      {url ? (
-                        <video
-                          src={url}
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover',
-                            pointerEvents: 'none',
-                            transform: `rotate(${item.rotation + (aspectRatio === '9:16' ? 90 : 0)}deg) scale(${aspectRatio === '9:16' ? 1.8 : 1})`,
-                            transition: 'transform 0.4s ease'
-                          }}
-                        />
-                      ) : (
-                        <div style={{ width: '100%', height: '100%', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>Loading...</span>
-                        </div>
-                      )}
-
-                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '10px', fontSize: '0.65rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', background: 'linear-gradient(transparent, rgba(0,0,0,0.8))', color: '#fff' }}>
-                        {item.file.name}
-                      </div>
-                    </div>
-
-                    {/* Drop Indicator - Right */}
-                    {dragOverIndex === index && draggedIndex !== null && draggedIndex < index && (
-                      <div style={{ width: '4px', height: '100%', background: 'var(--accent)', borderRadius: '4px', boxShadow: '0 0 15px var(--accent)', margin: '0 8px', transition: 'all 0.2s' }}></div>
-                    )}
-                  </div>
+                  <TimelineItem 
+                    key={`${item.file.name}-${index}`}
+                    item={item}
+                    index={index}
+                    aspectRatio={aspectRatio}
+                    draggedIndex={draggedIndex}
+                    dragOverIndex={dragOverIndex}
+                    handleDragStart={handleDragStart}
+                    handleDragOver={handleDragOver}
+                    handleDragEnd={handleDragEnd}
+                    handleDrop={handleDrop}
+                    removeClip={removeClip}
+                    rotateClip={rotateClip}
+                    url={url}
+                    setClips={setClips}
+                  />
                 );
               })
             )}
@@ -573,6 +700,10 @@ export default function VideoEditorPage() {
           .hero-card::-webkit-scrollbar-thumb {
             background: var(--line);
             border-radius: 10px;
+          }
+          .music-row:hover {
+            background: rgba(99, 102, 241, 0.15) !important;
+            color: #fff;
           }
         `}</style>
 

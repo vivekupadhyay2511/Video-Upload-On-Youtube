@@ -32,12 +32,13 @@ const requestSchema = z.object({
   aiStyle: z.string().optional(),
   musicUrl: z.string().optional(),
   rotations: z.array(z.number()).optional(),
+  customCaption: z.string().optional(),
 });
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { sessionId, aspectRatio, useAiCaption, aiStyle, musicUrl, rotations } = requestSchema.parse(body);
+    const { sessionId, aspectRatio, useAiCaption, aiStyle, musicUrl, rotations, customCaption } = requestSchema.parse(body);
 
     const inputDir = join(process.cwd(), "storage", "editor-raw", sessionId);
     const outputDir = join(process.cwd(), "storage", "editor-output", sessionId);
@@ -50,11 +51,18 @@ export async function POST(request: Request) {
       return Response.json({ success: false, message: "No clips found for this session." }, { status: 400 });
     }
 
-    let viralCaption = "";
+    let viralCaption = customCaption || "";
     let aiPosition = "bottom";
     let aiVibe = "hormozi";
+    
+    // AI Color Grading Decisions
+    let aiContrast = 1.1;
+    let aiBrightness = 0;
+    let aiSaturation = 1.2;
+    let aiGamma = 1.0;
+    let aiSharpness = 0.5;
 
-    if (useAiCaption) {
+    if (useAiCaption || true) { // Always run vision for color grading even if caption is custom
       const apiKey = process.env.GEMINI_API_KEY;
       if (apiKey) {
         try {
@@ -88,24 +96,41 @@ export async function POST(request: Request) {
             "caption": "engaging uppercase ${styleType} 10-15 word caption",
             "position": "top" | "middle" | "bottom",
             "vibe": "hormozi" | "elegant" | "neon" | "minimalist",
+            "color_grading": {
+               "contrast": number (0.8 to 1.6),
+               "brightness": number (-0.1 to 0.1),
+               "saturation": number (1.0 to 1.8),
+               "gamma": number (0.8 to 1.2),
+               "sharpness": number (0 to 2)
+            },
             "reasoning": "short explanation"
           }
-          Avoid blocking important faces or objects in the image.`;
+          Analyze the lighting and colors. If the image is dull or low contrast, increase contrast and saturation to make it pop.`;
           
           const result = await model.generateContent([prompt, imagePart]);
           const responseText = result.response.text().trim();
           const jsonMatch = responseText.match(/\{[\s\S]*\}/);
           const aiData = JSON.parse(jsonMatch ? jsonMatch[0] : responseText);
           
-          viralCaption = aiData.caption || "WAIT FOR THE END";
+          if (!viralCaption) {
+            viralCaption = aiData.caption || "WAIT FOR THE END";
+          }
           aiPosition = aiData.position || "bottom";
           aiVibe = aiData.vibe || "hormozi";
 
+          if (aiData.color_grading) {
+            aiContrast = aiData.color_grading.contrast ?? aiContrast;
+            aiBrightness = aiData.color_grading.brightness ?? aiBrightness;
+            aiSaturation = aiData.color_grading.saturation ?? aiSaturation;
+            aiGamma = aiData.color_grading.gamma ?? aiGamma;
+            aiSharpness = aiData.color_grading.sharpness ?? aiSharpness;
+          }
+
         } catch (error) {
-          console.error("Gemini AI Caption Error:", error);
-          viralCaption = "WAIT FOR THE END";
+          console.error("Gemini AI Analysis Error:", error);
+          if (!viralCaption) viralCaption = "WAIT FOR THE END";
         }
-      } else {
+      } else if (!viralCaption) {
         const fallbacks = [
           "YOU WILL NEVER BELIEVE WHAT HAPPENS AT THE VERY END OF THIS VIDEO",
           "THIS IS THE MOST INCREDIBLE MOMENT CAPTURED ON CAMERA TODAY",
@@ -184,7 +209,8 @@ export async function POST(request: Request) {
         }
       }
 
-      filterComplex += `${preFilter}scale='ceil(max(${width},a*${height})/2)*2':'ceil(max(${height},${width}/a)/2)*2',crop=${width}:${height},eq=contrast=1.15:saturation=1.1,fps=30,setsar=1[v${index}];`;
+      const sharpen = aiSharpness > 0 ? `unsharp=5:5:${aiSharpness}:5:5:0,` : "";
+      filterComplex += `${preFilter}scale='ceil(max(${width},a*${height})/2)*2':'ceil(max(${height},${width}/a)/2)*2',crop=${width}:${height},eq=contrast=${aiContrast}:brightness=${aiBrightness}:saturation=${aiSaturation}:gamma=${aiGamma},${sharpen}fps=30,setsar=1[v${index}];`;
     });
 
     const outLabel = viralCaption ? "[concatv]" : "[outv]";
