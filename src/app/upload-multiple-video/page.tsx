@@ -101,9 +101,32 @@ export default function BulkUploadPage() {
 
         if (dData.success) {
           currentTitle = dData.title || currentTitle || ("Video " + rows[i].srNo);
+          let finalPreviewUrl = dData.previewUrl;
+          
+          // Trigger immediate crop for last 2 seconds
+          try {
+            const urlParts = dData.previewUrl.split('/');
+            const downloadId = urlParts[urlParts.length - 1]?.split('?')[0];
+            if (downloadId) {
+              const cropResponse = await fetch("/api/crop-video", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ downloadId }),
+              });
+              const cropData = await cropResponse.json();
+              if (cropData.success) {
+                finalPreviewUrl = `${dData.previewUrl}?t=${Date.now()}`;
+              } else {
+                console.warn(`Row ${i} crop failed:`, cropData.message);
+              }
+            }
+          } catch (err) {
+            console.error(`Row ${i} crop request failed:`, err);
+          }
+
           updateRow(i, {
             videoStatus: 'completed',
-            previewUrl: dData.previewUrl,
+            previewUrl: finalPreviewUrl,
             title: currentTitle
           });
           
@@ -137,9 +160,32 @@ export default function BulkUploadPage() {
       const dData = await dResponse.json();
 
       if (dData.success) {
+        let finalPreviewUrl = dData.previewUrl;
+        
+        // Trigger immediate crop for last 2 seconds
+        try {
+          const urlParts = dData.previewUrl.split('/');
+          const downloadId = urlParts[urlParts.length - 1]?.split('?')[0];
+          if (downloadId) {
+            const cropResponse = await fetch("/api/crop-video", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ downloadId }),
+            });
+            const cropData = await cropResponse.json();
+            if (cropData.success) {
+              finalPreviewUrl = `${dData.previewUrl}?t=${Date.now()}`;
+            } else {
+              console.warn(`Row ${index} crop failed:`, cropData.message);
+            }
+          }
+        } catch (err) {
+          console.error(`Row ${index} crop request failed:`, err);
+        }
+
         updateRow(index, {
           videoStatus: 'completed',
-          previewUrl: dData.previewUrl,
+          previewUrl: finalPreviewUrl,
           title: dData.title || row.title || ("Video " + row.srNo)
         });
       } else {
