@@ -92,7 +92,23 @@ export async function POST(request: Request) {
       }
       
       // Ensure no quotes or special characters break the FFmpeg filter string
-      viralCaption = viralCaption.replace(/['"]/g, '').trim();
+      // and wrap the text to prevent cropping
+      viralCaption = viralCaption.replace(/['":]/g, '').trim();
+      
+      const wrapLimit = aspectRatio === "9:16" ? 25 : 45;
+      const words = viralCaption.split(/\s+/);
+      let wrapped = "";
+      let line = "";
+      for (const word of words) {
+        if ((line + word).length > wrapLimit) {
+          wrapped += line.trim() + "\n";
+          line = word + " ";
+        } else {
+          line += word + " ";
+        }
+      }
+      wrapped += line.trim();
+      viralCaption = wrapped;
     }
 
     const outputPath = join(outputDir, "final_video.mp4");
@@ -158,7 +174,9 @@ export async function POST(request: Request) {
       filterComplex += `${vInputs}concat=n=${videoFiles.length}:v=1:a=0${outLabel};`;
       
       if (viralCaption) {
-        filterComplex += `[concatv]drawtext=fontfile='C\\:/Windows/Fonts/impact.ttf':text='${viralCaption}':fontcolor=white:fontsize=(h/40):x=(w-text_w)/2:y=(h-text_h)*0.85:box=1:boxcolor=black@0.5:boxborderw=15[outv]`;
+        // Escape newlines for FFmpeg drawtext filter
+        const ffmpegCaption = viralCaption.replace(/\n/g, '\\n'); 
+        filterComplex += `[concatv]drawtext=fontfile='C\\:/Windows/Fonts/impact.ttf':text='${ffmpegCaption}':fontcolor=white:fontsize=(h/40):line_spacing=10:x=(w-text_w)/2:y=(h-text_h)*0.85:box=1:boxcolor=black@0.5:boxborderw=15[outv]`;
       }
       
       command.complexFilter(filterComplex);
@@ -176,7 +194,9 @@ export async function POST(request: Request) {
       filterComplex += `${vInputs}concat=n=${videoFiles.length}:v=1:a=0${outLabel}`;
       
       if (viralCaption) {
-        filterComplex += `;[concatv]drawtext=fontfile='C\\:/Windows/Fonts/impact.ttf':text='${viralCaption}':fontcolor=white:fontsize=(h/40):x=(w-text_w)/2:y=(h-text_h)*0.85:box=1:boxcolor=black@0.5:boxborderw=15[outv]`;
+        // Escape newlines for FFmpeg drawtext filter
+        const ffmpegCaption = viralCaption.replace(/\n/g, '\\n'); 
+        filterComplex += `;[concatv]drawtext=fontfile='C\\:/Windows/Fonts/impact.ttf':text='${ffmpegCaption}':fontcolor=white:fontsize=(h/40):line_spacing=10:x=(w-text_w)/2:y=(h-text_h)*0.85:box=1:boxcolor=black@0.5:boxborderw=15[outv]`;
       }
       
       command.complexFilter(filterComplex);

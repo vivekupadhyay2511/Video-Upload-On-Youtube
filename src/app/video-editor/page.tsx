@@ -18,6 +18,8 @@ export default function VideoEditorPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [outputUrl, setOutputUrl] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -33,8 +35,34 @@ export default function VideoEditorPage() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setClips(Array.from(e.target.files));
+      setClips(prev => [...prev, ...Array.from(e.target.files!)]);
     }
+  };
+
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (index: number) => {
+    if (draggedIndex === null || draggedIndex === index) return;
+    
+    const newClips = [...clips];
+    const draggedItem = newClips[draggedIndex];
+    newClips.splice(draggedIndex, 1);
+    newClips.splice(index, 0, draggedItem);
+    
+    setClips(newClips);
+    setDraggedIndex(null);
+  };
+
+  const removeClip = (index: number) => {
+    setClips(clips.filter((_, i) => i !== index));
   };
 
   const handleGenerate = async () => {
@@ -93,6 +121,27 @@ export default function VideoEditorPage() {
     }
   };
 
+  useEffect(() => {
+    let interval: any;
+    if (isUploading || isGenerating) {
+      setProgress(0);
+      interval = setInterval(() => {
+        setProgress((prev) => {
+          if (prev < 95) {
+            const increment = Math.max(0.1, (95 - prev) / 30);
+            return prev + increment;
+          }
+          return prev;
+        });
+      }, 150);
+    } else {
+      setProgress(0);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isUploading, isGenerating]);
+
   return (
     <main className="page-shell">
       <article className="hero-card animate-fade-in" style={{ width: 'min(1200px, 100%)', display: 'flex', gap: '40px', flexWrap: 'wrap', padding: '40px' }}>
@@ -113,19 +162,65 @@ export default function VideoEditorPage() {
             )}
 
             <div className="video-form" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <label>
-                1. Upload Clips
-                <input 
-                  type="file" 
-                  multiple 
-                  accept="video/*" 
-                  onChange={handleFileChange}
-                  style={{ width: '100%' }}
-                />
+              <div>
+                <label style={{ display: 'block', marginBottom: '10px', fontWeight: 600 }}>1. Upload Clips</label>
+                <div style={{ 
+                  border: '2px dashed var(--line)', 
+                  borderRadius: '16px', 
+                  padding: '30px', 
+                  textAlign: 'center',
+                  background: 'rgba(255,255,255,0.02)',
+                  position: 'relative'
+                }}>
+                  <input 
+                    type="file" 
+                    multiple 
+                    accept="video/*" 
+                    onChange={handleFileChange}
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
+                  />
+                  <div style={{ fontSize: '2rem', marginBottom: '10px' }}>📁</div>
+                  <div style={{ fontWeight: 600, color: 'var(--text)' }}>Click or Drag Video Clips</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: '4px' }}>MP4, MOV supported</div>
+                </div>
+
                 {clips.length > 0 && (
-                  <p className="hint-text" style={{ color: 'var(--accent)', fontWeight: 600 }}>{clips.length} clip(s) selected.</p>
+                  <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '300px', overflowY: 'auto', paddingRight: '10px' }}>
+                    {clips.map((clip, index) => (
+                      <div 
+                        key={`${clip.name}-${index}`} 
+                        draggable="true"
+                        onDragStart={() => handleDragStart(index)}
+                        onDragOver={(e) => handleDragOver(e, index)}
+                        onDrop={() => handleDrop(index)}
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '12px', 
+                          background: draggedIndex === index ? 'rgba(99, 102, 241, 0.1)' : 'rgba(255,255,255,0.05)', 
+                          padding: '10px', 
+                          borderRadius: '12px', 
+                          border: `1px solid ${draggedIndex === index ? 'var(--accent)' : 'var(--line)'}`,
+                          cursor: 'grab',
+                          opacity: draggedIndex === index ? 0.5 : 1,
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <div style={{ color: 'var(--muted)', cursor: 'grab' }}>⠿</div>
+                        <div style={{ width: '64px', height: '36px', background: '#000', borderRadius: '4px', overflow: 'hidden', flexShrink: 0 }}>
+                           <video src={URL.createObjectURL(clip)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </div>
+                        <div style={{ flex: 1, fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {clip.name}
+                        </div>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <button onClick={() => removeClip(index)} style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid rgba(239, 68, 68, 0.2)', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem' }}>✕</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
-              </label>
+              </div>
 
               <div style={{ display: 'flex', gap: '20px' }}>
                 <div style={{ flex: 1 }}>
@@ -210,7 +305,62 @@ export default function VideoEditorPage() {
             }}>
               <p style={{ margin: '0 0 20px', fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em' }}>Final Output Preview</p>
               
-              {outputUrl ? (
+              {(isUploading || isGenerating) ? (
+                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '32px', padding: '0 20px' }}>
+                  <div style={{ 
+                    width: '100%', 
+                    aspectRatio: aspectRatio === '16:9' ? '16/9' : '9/16',
+                    maxHeight: '400px',
+                    background: 'rgba(255,255,255,0.03)',
+                    borderRadius: '16px',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: '-100%',
+                      width: '100%',
+                      height: '100%',
+                      background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent)',
+                      animation: 'skeleton-slide 1.5s infinite'
+                    }} />
+                    <div style={{ zIndex: 1, textAlign: 'center' }}>
+                       <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>🎬</div>
+                       <div style={{ fontWeight: 700, color: '#fff', fontSize: '1.1rem' }}>
+                         {isUploading ? "Uploading Media..." : "AI Processing..."}
+                       </div>
+                    </div>
+                  </div>
+
+                  <div style={{ width: '100%' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.85rem', fontWeight: 600 }}>
+                      <span style={{ color: 'var(--muted)' }}>
+                        {isUploading ? "Transmitting data to server" : "Analyzing clips & applying captions"}
+                      </span>
+                      <span style={{ color: 'var(--accent)' }}>{Math.round(progress)}%</span>
+                    </div>
+                    <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', overflow: 'hidden' }}>
+                      <div style={{ width: `${progress}%`, height: '100%', background: 'linear-gradient(90deg, var(--accent), #a855f7)', transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: '0 0 10px var(--accent)' }} />
+                    </div>
+                  </div>
+                  
+                  <p style={{ color: 'var(--muted)', fontSize: '0.85rem', textAlign: 'center', lineHeight: '1.6', margin: 0 }}>
+                    Our AI is currently stitching your clips and generating viral captions. <br/>
+                    Please do not refresh the page.
+                  </p>
+
+                  <style jsx>{`
+                    @keyframes skeleton-slide {
+                      0% { left: -100%; }
+                      100% { left: 100%; }
+                    }
+                  `}</style>
+                </div>
+              ) : outputUrl ? (
                 <video 
                   controls 
                   src={outputUrl} 
