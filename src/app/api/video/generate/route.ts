@@ -29,13 +29,14 @@ const requestSchema = z.object({
   sessionId: z.string(),
   aspectRatio: z.enum(["16:9", "9:16"]),
   useAiCaption: z.boolean().optional(),
+  aiStyle: z.string().optional(),
   musicUrl: z.string().optional(),
 });
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { sessionId, aspectRatio, useAiCaption, musicUrl } = requestSchema.parse(body);
+    const { sessionId, aspectRatio, useAiCaption, aiStyle, musicUrl } = requestSchema.parse(body);
 
     const inputDir = join(process.cwd(), "storage", "editor-raw", sessionId);
     const outputDir = join(process.cwd(), "storage", "editor-output", sessionId);
@@ -73,7 +74,12 @@ export async function POST(request: Request) {
             }
           };
 
-          const prompt = "Analyze this image from a video and generate a long, highly engaging, viral 10-15 word caption suitable for TikTok/YouTube Shorts. Just return the caption, nothing else. Make it catchy, uppercase, and without quotes.";
+          let stylePrompt = "highly engaging, viral 10-15 word caption";
+          if (aiStyle === "Epic") stylePrompt = "cinematic, dramatic, and high-impact 10-15 word caption";
+          if (aiStyle === "Professional") stylePrompt = "clean, sophisticated, and professional 10-15 word caption";
+          if (aiStyle === "Funny") stylePrompt = "humorous, witty, and entertaining 10-15 word caption";
+
+          const prompt = `Analyze this image from a video and generate a ${stylePrompt} suitable for TikTok/YouTube Shorts. Just return the caption, nothing else. Make it catchy, uppercase, and without quotes.`;
           
           const result = await model.generateContent([prompt, imagePart]);
           viralCaption = result.response.text().trim().replace(/['"]/g, '');
