@@ -31,12 +31,13 @@ const requestSchema = z.object({
   useAiCaption: z.boolean().optional(),
   aiStyle: z.string().optional(),
   musicUrl: z.string().optional(),
+  rotations: z.array(z.number()).optional(),
 });
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { sessionId, aspectRatio, useAiCaption, aiStyle, musicUrl } = requestSchema.parse(body);
+    const { sessionId, aspectRatio, useAiCaption, aiStyle, musicUrl, rotations } = requestSchema.parse(body);
 
     const inputDir = join(process.cwd(), "storage", "editor-raw", sessionId);
     const outputDir = join(process.cwd(), "storage", "editor-output", sessionId);
@@ -50,6 +51,8 @@ export async function POST(request: Request) {
     }
 
     let viralCaption = "";
+    let aiPosition = "bottom";
+    let aiVibe = "hormozi";
 
     if (useAiCaption) {
       const apiKey = process.env.GEMINI_API_KEY;
@@ -74,15 +77,30 @@ export async function POST(request: Request) {
             }
           };
 
-          let stylePrompt = "highly engaging, viral 10-15 word caption";
-          if (aiStyle === "Epic") stylePrompt = "cinematic, dramatic, and high-impact 10-15 word caption";
-          if (aiStyle === "Professional") stylePrompt = "clean, sophisticated, and professional 10-15 word caption";
-          if (aiStyle === "Funny") stylePrompt = "humorous, witty, and entertaining 10-15 word caption";
+          let styleType = "highly engaging, viral";
+          if (aiStyle === "Epic") styleType = "cinematic, dramatic, and high-impact";
+          if (aiStyle === "Professional") styleType = "clean, sophisticated, and professional";
+          if (aiStyle === "Funny") styleType = "humorous, witty, and entertaining";
 
-          const prompt = `Analyze this image from a video and generate a ${stylePrompt} suitable for TikTok/YouTube Shorts. Just return the caption, nothing else. Make it catchy, uppercase, and without quotes.`;
+          const prompt = `Analyze this image from a video and generate a viral video metadata JSON. 
+          Respond ONLY with a JSON object in this format:
+          {
+            "caption": "engaging uppercase ${styleType} 10-15 word caption",
+            "position": "top" | "middle" | "bottom",
+            "vibe": "hormozi" | "elegant" | "neon" | "minimalist",
+            "reasoning": "short explanation"
+          }
+          Avoid blocking important faces or objects in the image.`;
           
           const result = await model.generateContent([prompt, imagePart]);
-          viralCaption = result.response.text().trim().replace(/['"]/g, '');
+          const responseText = result.response.text().trim();
+          const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+          const aiData = JSON.parse(jsonMatch ? jsonMatch[0] : responseText);
+          
+          viralCaption = aiData.caption || "WAIT FOR THE END";
+          aiPosition = aiData.position || "bottom";
+          aiVibe = aiData.vibe || "hormozi";
+
         } catch (error) {
           console.error("Gemini AI Caption Error:", error);
           viralCaption = "WAIT FOR THE END";
@@ -97,17 +115,14 @@ export async function POST(request: Request) {
         viralCaption = fallbacks[Math.floor(Math.random() * fallbacks.length)];
       }
       
-      // Ensure no quotes or special characters break the FFmpeg filter string
-      // and wrap the text to prevent cropping
       viralCaption = viralCaption.replace(/['":]/g, '').trim();
-      
-      const wrapLimit = aspectRatio === "9:16" ? 25 : 45;
+      const wrapLimit = aspectRatio === "9:16" ? 22 : 40;
       const words = viralCaption.split(/\s+/);
       let wrapped = "";
       let line = "";
       for (const word of words) {
         if ((line + word).length > wrapLimit) {
-          wrapped += line.trim() + "\n";
+          wrapped += line.trim() + "\\n";
           line = word + " ";
         } else {
           line += word + " ";
@@ -118,7 +133,6 @@ export async function POST(request: Request) {
     }
 
     const outputPath = join(outputDir, "final_video.mp4");
-    
     const width = aspectRatio === "16:9" ? 1920 : 1080;
     const height = aspectRatio === "16:9" ? 1080 : 1920;
 
@@ -144,29 +158,29 @@ export async function POST(request: Request) {
     );
 
     const command = ffmpeg();
-
-    videoFiles.forEach((file) => {
-      command.input(join(inputDir, file));
-    });
-
-    if (musicUrl) {
-      command.input(musicUrl);
-    }
+    videoFiles.forEach((file) => command.input(join(inputDir, file)));
 
     let filterComplex = "";
 
     videoFiles.forEach((file, index) => {
       const meta = videoMetadata[index];
+      const manualRotation = rotations ? rotations[index] : 0;
       let preFilter = `[${index}:v]`;
       
+      // Apply Manual Rotation
+      if (manualRotation === 90) preFilter += `transpose=1,`;
+      else if (manualRotation === 180) preFilter += `transpose=1,transpose=1,`;
+      else if (manualRotation === 270) preFilter += `transpose=2,`;
+
+      // Apply Auto-Rotation for Aspect Ratio mismatch
       const isVideoLandscape = meta.width > meta.height;
       const isTargetLandscape = aspectRatio === "16:9";
 
       if (meta.width > 0 && meta.height > 0) {
         if (isVideoLandscape && !isTargetLandscape) {
-          preFilter += `transpose=1,`; // Rotate 90 degrees clockwise
+          preFilter += `transpose=1,`;
         } else if (!isVideoLandscape && isTargetLandscape) {
-          preFilter += `transpose=1,`; // Rotate 90 degrees clockwise
+          preFilter += `transpose=1,`;
         }
       }
 
@@ -174,50 +188,54 @@ export async function POST(request: Request) {
     });
 
     const outLabel = viralCaption ? "[concatv]" : "[outv]";
+    const vInputs = videoFiles.map((_, i) => `[v${i}]`).join("");
+    filterComplex += `${vInputs}concat=n=${videoFiles.length}:v=1:a=0${outLabel}`;
 
-    if (musicUrl) {
-      const vInputs = videoFiles.map((_, i) => `[v${i}]`).join("");
-      filterComplex += `${vInputs}concat=n=${videoFiles.length}:v=1:a=0${outLabel};`;
-      
-      if (viralCaption) {
-        // Escape newlines for FFmpeg drawtext filter
-        const ffmpegCaption = viralCaption.replace(/\n/g, '\\n'); 
-        filterComplex += `[concatv]drawtext=fontfile='C\\:/Windows/Fonts/impact.ttf':text='${ffmpegCaption}':fontcolor=white:fontsize=(h/40):line_spacing=10:x=(w-text_w)/2:y=(h-text_h)*0.85:box=1:boxcolor=black@0.5:boxborderw=15[outv]`;
+    if (viralCaption) {
+      let yPos = "(h-text_h)*0.85";
+      if (aiPosition === "top") yPos = "h*0.12";
+      if (aiPosition === "middle") yPos = "(h-text_h)/2";
+
+      let styleParams = "fontcolor=white:borderw=4:bordercolor=black";
+      if (aiVibe === "hormozi") {
+        styleParams = "fontcolor=yellow:borderw=10:bordercolor=black:shadowcolor=black@0.6:shadowx=6:shadowy=6";
+      } else if (aiVibe === "neon") {
+        styleParams = "fontcolor=0x00FFFF:borderw=3:bordercolor=white:shadowcolor=0xFF00FF@0.4:shadowx=0:shadowy=0:box=1:boxcolor=black@0.3";
+      } else if (aiVibe === "elegant") {
+        styleParams = "fontcolor=white:borderw=1:bordercolor=0xAAAAAA:shadowcolor=black@0.4:shadowx=3:shadowy=3";
+      } else if (aiVibe === "minimalist") {
+        styleParams = "fontcolor=white:box=1:boxcolor=black@0.5:boxborderw=25";
       }
-      
-      command.complexFilter(filterComplex);
-      
-      command.outputOptions([
-        '-map [outv]',
-        `-map ${videoFiles.length}:a`,
-        '-shortest',
-        '-c:v libx264',
-        '-c:a aac',
-        '-pix_fmt yuv420p'
-      ]);
-    } else {
-      const vInputs = videoFiles.map((_, i) => `[v${i}]`).join("");
-      filterComplex += `${vInputs}concat=n=${videoFiles.length}:v=1:a=0${outLabel}`;
-      
-      if (viralCaption) {
-        // Escape newlines for FFmpeg drawtext filter
-        const ffmpegCaption = viralCaption.replace(/\n/g, '\\n'); 
-        filterComplex += `;[concatv]drawtext=fontfile='C\\:/Windows/Fonts/impact.ttf':text='${ffmpegCaption}':fontcolor=white:fontsize=(h/40):line_spacing=10:x=(w-text_w)/2:y=(h-text_h)*0.85:box=1:boxcolor=black@0.5:boxborderw=15[outv]`;
-      }
-      
-      command.complexFilter(filterComplex);
-      command.outputOptions([
-        '-map [outv]',
-        '-c:v libx264',
-        '-pix_fmt yuv420p'
-      ]);
+
+      const ffmpegCaption = viralCaption.replace(/\\n/g, '\\n');
+      filterComplex += `;[concatv]drawtext=fontfile='C\\:/Windows/Fonts/impact.ttf':text='${ffmpegCaption}':${styleParams}:fontsize=(h/26):line_spacing=20:x=(w-text_w)/2:y=${yPos}[outv]`;
     }
+    
+    command.complexFilter(filterComplex);
+
+    let audioStartTime = "0";
+    if (musicUrl) {
+      if (aiStyle === "Viral") audioStartTime = "30"; 
+      if (aiStyle === "Epic") audioStartTime = "60";  
+      if (aiStyle === "Funny") audioStartTime = "15"; 
+    }
+
+    const outputOptions = ['-map [outv]', '-c:v libx264', '-pix_fmt yuv420p'];
+    if (musicUrl) {
+      command.input(musicUrl).inputOptions([`-ss ${audioStartTime}`]);
+      outputOptions.push(`-map ${videoFiles.length}:a`, '-shortest', '-c:a aac', '-b:a 192k');
+    }
+    
+    command.outputOptions(outputOptions);
 
     await new Promise<void>((resolve, reject) => {
       command
         .output(outputPath)
         .on('end', () => resolve())
-        .on('error', (err, stdout, stderr) => reject(new Error(`${err.message}\n${stderr}`)))
+        .on('error', (err, stdout, stderr) => {
+          console.error("FFmpeg Error:", stderr);
+          reject(new Error(`${err.message}\n${stderr}`));
+        })
         .run();
     });
 
