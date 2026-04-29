@@ -123,6 +123,34 @@ export default function BulkUploadPage() {
     setGlobalLoading(null);
   };
 
+  const redownloadRowVideo = async (index: number) => {
+    const row = rows[index];
+    if (!row.videoLink) return;
+
+    updateRow(index, { videoStatus: 'processing', previewUrl: undefined });
+    try {
+      const dResponse = await fetch("/api/download-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceUrl: row.videoLink }),
+      });
+      const dData = await dResponse.json();
+
+      if (dData.success) {
+        updateRow(index, {
+          videoStatus: 'completed',
+          previewUrl: dData.previewUrl,
+          title: dData.title || row.title || ("Video " + row.srNo)
+        });
+      } else {
+        updateRow(index, { videoStatus: 'error', message: dData.message });
+      }
+    } catch (error) {
+      console.error("Row video redownload error:", error);
+      updateRow(index, { videoStatus: 'error', message: 'Download failed' });
+    }
+  };
+
   const regenerateRowAi = async (index: number) => {
     const row = rows[index];
     // Use the latest title from the state
@@ -281,6 +309,17 @@ export default function BulkUploadPage() {
                     <td>
                        <div className="action-buttons">
                          <button 
+                           className="redownload-btn" 
+                           title="Redownload Video"
+                           onClick={() => redownloadRowVideo(index)}
+                         >
+                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                             <polyline points="7 10 12 15 17 10" />
+                             <line x1="12" y1="15" x2="12" y2="3" />
+                           </svg>
+                         </button>
+                         <button 
                            className="reload-btn" 
                            title="Regenerate Title & Description"
                            onClick={() => regenerateRowAi(index)}
@@ -438,7 +477,7 @@ export default function BulkUploadPage() {
           align-items: center;
         }
 
-        .reload-btn, .reupload-btn {
+        .reload-btn, .reupload-btn, .redownload-btn {
           background: rgba(124, 58, 237, 0.1);
           border: 1px solid rgba(124, 58, 237, 0.2);
           border-radius: 50%;
@@ -458,6 +497,11 @@ export default function BulkUploadPage() {
           border-color: rgba(22, 163, 74, 0.2);
         }
 
+        .redownload-btn {
+          background: rgba(59, 130, 246, 0.1);
+          border-color: rgba(59, 130, 246, 0.2);
+        }
+
         .reload-btn:hover:not(:disabled) {
           background: rgba(124, 58, 237, 0.2);
           border-color: #7c3aed;
@@ -470,7 +514,13 @@ export default function BulkUploadPage() {
           transform: translateY(-2px);
         }
 
-        .reload-btn:disabled, .reupload-btn:disabled {
+        .redownload-btn:hover:not(:disabled) {
+          background: rgba(59, 130, 246, 0.2);
+          border-color: #3b82f6;
+          transform: translateY(2px);
+        }
+
+        .reload-btn:disabled, .reupload-btn:disabled, .redownload-btn:disabled {
           opacity: 0.5;
           cursor: not-allowed;
         }
