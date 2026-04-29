@@ -135,6 +135,9 @@ export default function Header() {
               <a href="/upload-multiple-video" onClick={() => setIsDropdownOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', textDecoration: 'none', color: 'var(--text)', borderRadius: '10px', fontSize: '0.9rem' }} className="menu-item">
                 <span style={{ fontSize: '1.1rem' }}>📁</span> Bulk Video Upload
               </a>
+              <a href="/video-editor" onClick={() => setIsDropdownOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', textDecoration: 'none', color: 'var(--text)', borderRadius: '10px', fontSize: '0.9rem' }} className="menu-item">
+                <span style={{ fontSize: '1.1rem' }}>🎬</span> Video Editor
+              </a>
             </div>
           )}
           <style jsx>{`
