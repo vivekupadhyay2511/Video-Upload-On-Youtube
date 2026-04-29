@@ -284,7 +284,6 @@ export default function BulkUploadPage() {
                            className="reload-btn" 
                            title="Regenerate Title & Description"
                            onClick={() => regenerateRowAi(index)}
-                           disabled={!!globalLoading || row.titleStatus === 'processing'}
                          >
                            🔄
                          </button>
@@ -292,7 +291,6 @@ export default function BulkUploadPage() {
                            className="reupload-btn" 
                            title="Upload / Reupload to YouTube"
                            onClick={() => reuploadRow(index)}
-                           disabled={!!globalLoading || row.uploadStatus === 'processing'}
                          >
                            📤
                          </button>
