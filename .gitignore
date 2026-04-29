@@ -1,6 +1,6 @@
 .next
 node_modules
-storage/downloads
+storage
 .env
 .env.local
 .env.development.local

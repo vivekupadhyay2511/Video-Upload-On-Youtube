@@ -49,11 +49,14 @@ export async function getVideoInfo(sourceUrl: string) {
     dumpJson: true,
     noWarnings: true,
     noCheckCertificates: true,
+    extractorArgs: "youtube:player-client=ios,android,web",
   });
   return info as any;
 }
 
-export function improveTitle(title: string) {
+export function improveTitle(title?: string) {
+  if (!title) return "Untitled Video";
+
   // Simple "AI" improvement: Clean up, capitalize, and add hashtags
   let improved = title
     .replace(/[\[\]\(\)]/g, "") // Remove brackets/parens
@@ -61,16 +64,6 @@ export function improveTitle(title: string) {
     .split(" ")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(" ");
-
-  const hashtags = [" #Viral", " #Trending", " #Shorts", " #Video"];
-  
-  for (const tag of hashtags) {
-    if ((improved + tag).length <= 100) {
-      improved += tag;
-    } else {
-      break;
-    }
-  }
 
   return improved.slice(0, 100);
 }
@@ -92,6 +85,7 @@ export async function downloadSourceVideo(sourceUrl: string) {
     restrictFilenames: true,
     format: "mp4/bestvideo+bestaudio/best",
     mergeOutputFormat: "mp4",
+    extractorArgs: "youtube:player-client=ios,android,web",
   });
 
   const downloadedFiles = await readdir(downloadDir);
