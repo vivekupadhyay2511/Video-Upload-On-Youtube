@@ -61,6 +61,11 @@ export default function Header() {
             className="app-logo"
             style={{ borderRadius: '50%', objectFit: 'cover', width: '32px', height: '32px', border: '2px solid var(--accent)' }}
           />
+          {authStatus?.ok && authStatus.channels && authStatus.channels.length > 0 && authStatus.channels[0].title && (
+            <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#fff', whiteSpace: 'nowrap' }}>
+              {authStatus.channels[0].title}
+            </span>
+          )}
           {!checkingAuth && authStatus?.ok ? (
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#4ade80', background: 'rgba(74, 222, 128, 0.1)', padding: '4px 10px', borderRadius: '99px', border: '1px solid rgba(74, 222, 128, 0.2)' }}>
               Verified
