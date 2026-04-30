@@ -8,6 +8,7 @@ export interface BulkVideoRow {
   scheduleTime: string; // HH:MM
   // Result fields
   previewUrl?: string;
+  downloadId?: string;
   title?: string;
   description?: string;
   videoStatus?: 'idle' | 'processing' | 'completed' | 'error';

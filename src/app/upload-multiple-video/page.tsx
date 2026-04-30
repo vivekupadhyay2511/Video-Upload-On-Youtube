@@ -55,10 +55,10 @@ export default function BulkUploadPage() {
           }),
         });
         const data = await response.json();
-        
+
         if (data.title && data.description && !data.error) {
-          updateRow(index, { 
-            title: data.title, 
+          updateRow(index, {
+            title: data.title,
             titleStatus: 'completed',
             description: data.description,
             descriptionStatus: 'completed'
@@ -102,7 +102,7 @@ export default function BulkUploadPage() {
         if (dData.success) {
           currentTitle = dData.title || currentTitle || ("Video " + rows[i].srNo);
           let finalPreviewUrl = dData.previewUrl;
-          
+
           // Trigger immediate crop for last 2 seconds
           try {
             const urlParts = dData.previewUrl.split('/');
@@ -127,9 +127,10 @@ export default function BulkUploadPage() {
           updateRow(i, {
             videoStatus: 'completed',
             previewUrl: finalPreviewUrl,
+            downloadId: urlParts[urlParts.length - 1]?.split('?')[0],
             title: currentTitle
           });
-          
+
           // Generate AI content using our reusable function
           await generateAiContentForRow(i, currentTitle);
         } else {
@@ -161,10 +162,11 @@ export default function BulkUploadPage() {
 
       if (dData.success) {
         let finalPreviewUrl = dData.previewUrl;
-        
+        let urlPartsData = [];
         // Trigger immediate crop for last 2 seconds
         try {
           const urlParts = dData.previewUrl.split('/');
+          urlPartsData = urlParts;
           const downloadId = urlParts[urlParts.length - 1]?.split('?')[0];
           if (downloadId) {
             const cropResponse = await fetch("/api/crop-video", {
@@ -186,6 +188,7 @@ export default function BulkUploadPage() {
         updateRow(index, {
           videoStatus: 'completed',
           previewUrl: finalPreviewUrl,
+          downloadId: urlPartsData[urlPartsData.length - 1]?.split('?')[0],
           title: dData.title || row.title || ("Video " + row.srNo)
         });
       } else {
@@ -201,17 +204,17 @@ export default function BulkUploadPage() {
     const row = rows[index];
     // Use the latest title from the state
     const currentTitle = row.title || ("Video " + row.srNo);
-    
+
     // Clear previous statuses to show it's starting fresh
     updateRow(index, { titleStatus: 'idle', descriptionStatus: 'idle' });
-    
+
     await generateAiContentForRow(index, currentTitle);
   };
 
   const uploadRowToYoutube = async (index: number) => {
     const row = rows[index];
     if (!row.videoLink || !row.previewUrl) return;
-    
+
     updateRow(index, { uploadStatus: 'processing', message: 'Uploading...' });
 
     try {
@@ -222,6 +225,7 @@ export default function BulkUploadPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sourceUrl: String(row.videoLink),
+          downloadId: row.downloadId,
           title: uploadTitle.length >= 3 ? uploadTitle : `Video ${row.srNo}`,
           description: String(row.description || ""),
           privacyStatus: isScheduled ? 'private' : 'public',
@@ -246,7 +250,7 @@ export default function BulkUploadPage() {
       if (!rows[i].videoLink || !rows[i].previewUrl) continue;
       // Skip already uploaded
       if (rows[i].uploadStatus === 'completed') continue;
-      
+
       await uploadRowToYoutube(i);
     }
     setGlobalLoading(null);
@@ -353,41 +357,41 @@ export default function BulkUploadPage() {
                       </div>
                     </td>
                     <td>
-                       <div className="action-buttons">
-                         <button 
-                           className="redownload-btn" 
-                           title="Redownload Video"
-                           onClick={() => redownloadRowVideo(index)}
-                         >
-                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                             <polyline points="7 10 12 15 17 10" />
-                             <line x1="12" y1="15" x2="12" y2="3" />
-                           </svg>
-                         </button>
-                         <button 
-                           className="reload-btn" 
-                           title="Regenerate Title & Description"
-                           onClick={() => regenerateRowAi(index)}
-                         >
-                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                             <path d="M3 3v5h5" />
-                           </svg>
-                         </button>
-                         <button 
-                           className="reupload-btn" 
-                           title="Upload / Reupload to YouTube"
-                           onClick={() => reuploadRow(index)}
-                         >
-                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                             <polyline points="17 8 12 3 7 8" />
-                             <line x1="12" y1="3" x2="12" y2="15" />
-                           </svg>
-                         </button>
-                       </div>
-                     </td>
+                      <div className="action-buttons">
+                        <button
+                          className="redownload-btn"
+                          title="Redownload Video"
+                          onClick={() => redownloadRowVideo(index)}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                          </svg>
+                        </button>
+                        <button
+                          className="reload-btn"
+                          title="Regenerate Title & Description"
+                          onClick={() => regenerateRowAi(index)}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                            <path d="M3 3v5h5" />
+                          </svg>
+                        </button>
+                        <button
+                          className="reupload-btn"
+                          title="Upload / Reupload to YouTube"
+                          onClick={() => reuploadRow(index)}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>

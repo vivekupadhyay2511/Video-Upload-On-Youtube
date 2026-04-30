@@ -1,6 +1,7 @@
 import { google } from "googleapis";
 import { createReadStream, statSync } from "node:fs";
-import { basename } from "node:path";
+import { readdir } from "node:fs/promises";
+import { basename, join } from "node:path";
 import { z } from "zod";
 
 import {
@@ -12,6 +13,7 @@ import { getRefreshToken } from "@/lib/token-storage";
 
 const requestSchema = z.object({
   sourceUrl: z.string().url(),
+  downloadId: z.string().optional(),
   title: z.string().trim().min(3).max(100),
   description: z.string().max(5000).optional().default(""),
   scheduleDate: z.string().optional(),
@@ -130,9 +132,30 @@ export async function POST(request: Request) {
     const parsed = requestSchema.parse(body);
     assertSupportedUrl(parsed.sourceUrl);
 
-    console.log(`[process-video] Downloading: ${parsed.sourceUrl}`);
-    const { downloadId, filePath } = await downloadSourceVideo(parsed.sourceUrl);
-    console.log(`[process-video] Download complete: ${filePath}`);
+    let filePath = "";
+    let downloadId = parsed.downloadId;
+
+    if (downloadId) {
+      const downloadDir = join(process.cwd(), "storage", "downloads", downloadId);
+      try {
+        const files = await readdir(downloadDir);
+        const filename = files.find(f => !f.startsWith('.'));
+        if (filename) {
+          filePath = join(downloadDir, filename);
+          console.log(`[process-video] Using existing local file: ${filePath}`);
+        }
+      } catch (err) {
+        console.warn(`[process-video] Local file for ${downloadId} not found, falling back to download.`);
+      }
+    }
+
+    if (!filePath) {
+      console.log(`[process-video] Downloading: ${parsed.sourceUrl}`);
+      const downloadResult = await downloadSourceVideo(parsed.sourceUrl);
+      filePath = downloadResult.filePath;
+      downloadId = downloadResult.downloadId;
+      console.log(`[process-video] Download complete: ${filePath}`);
+    }
 
     let publishAt: string | undefined = undefined;
     if (parsed.scheduleTime !== "" && parsed.scheduleDate) {
