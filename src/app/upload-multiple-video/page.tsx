@@ -102,10 +102,12 @@ export default function BulkUploadPage() {
         if (dData.success) {
           currentTitle = dData.title || currentTitle || ("Video " + rows[i].srNo);
           let finalPreviewUrl = dData.previewUrl;
+          let urlPartsData = [];
 
           // Trigger immediate crop for last 2 seconds
           try {
             const urlParts = dData.previewUrl.split('/');
+            urlPartsData = urlParts;
             const downloadId = urlParts[urlParts.length - 1]?.split('?')[0];
             if (downloadId) {
               const cropResponse = await fetch("/api/crop-video", {
@@ -127,7 +129,7 @@ export default function BulkUploadPage() {
           updateRow(i, {
             videoStatus: 'completed',
             previewUrl: finalPreviewUrl,
-            downloadId: urlParts[urlParts.length - 1]?.split('?')[0],
+            downloadId: urlPartsData[urlPartsData.length - 1]?.split('?')[0],
             title: currentTitle
           });
 

@@ -109,7 +109,7 @@ async function uploadToYouTube(params: {
         status: {
           privacyStatus: params.publishAt ? "private" : params.privacyStatus,
           publishAt: params.publishAt || undefined,
-          selfDeclaredMadeForKids: false,
+          selfDeclaredMadeForKids: true,
         },
       },
       media: {
