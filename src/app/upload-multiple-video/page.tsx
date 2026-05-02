@@ -557,6 +557,7 @@ export default function BulkUploadPage() {
 
         .table-input.input-error {
           border-color: #ef4444 !important;
+          background-color: rgba(239, 68, 68, 0.1) !important;
         }
 
         .char-counter {
