@@ -287,8 +287,8 @@ body {
 .hero-card,
 .app-header,
 .reauth-card {
-  width: min(1200px, 100%) !important;
-  max-width: 1200px !important;
+  width: min(1600px, 100%) !important;
+  max-width: 1600px !important;
 }
 
 .hero-card {
@@ -489,6 +489,7 @@ select {
   display: inline-block;
   transition: color 0.2s;
 }
+
 .back-link:hover {
   color: var(--text);
 }
@@ -530,6 +531,7 @@ select {
   margin-bottom: 14px;
   transition: all 0.3s ease;
 }
+
 .reauth-step:hover {
   background: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.2);

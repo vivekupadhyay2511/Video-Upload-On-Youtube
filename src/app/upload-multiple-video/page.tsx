@@ -262,6 +262,43 @@ export default function BulkUploadPage() {
     uploadRowToYoutube(index);
   };
 
+  const cropRowVideo = async (index: number) => {
+    const row = rows[index];
+    if (!row.downloadId) return;
+
+    updateRow(index, { videoStatus: 'processing' });
+    try {
+      const response = await fetch("/api/crop-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ downloadId: row.downloadId }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        // Refresh preview URL with timestamp to force browser reload
+        const baseUrl = row.previewUrl?.split('?')[0];
+        updateRow(index, {
+          videoStatus: 'completed',
+          previewUrl: `${baseUrl}?t=${Date.now()}`
+        });
+      } else {
+        updateRow(index, { videoStatus: 'error', message: data.message });
+      }
+    } catch (error) {
+      console.error(`Row ${index} crop failed:`, error);
+      updateRow(index, { videoStatus: 'error', message: 'Crop failed' });
+    }
+  };
+
+  const cropAllVideos = async () => {
+    setGlobalLoading("Cropping All Videos...");
+    for (let i = 0; i < rows.length; i++) {
+      if (!rows[i].downloadId) continue;
+      await cropRowVideo(i);
+    }
+    setGlobalLoading(null);
+  };
+
   return (
     <main className="page-shell">
       <section className="hero-card bulk-container animate-fade-in">
@@ -294,6 +331,9 @@ export default function BulkUploadPage() {
             <div className="action-row">
               <button className="premium-ai-btn" style={{ minWidth: '220px' }} onClick={generateAllContent} disabled={!!globalLoading}>
                 {globalLoading === "Processing All Content..." ? "⏳ Processing..." : "✨ Generate All Content"}
+              </button>
+              <button className="secondary-btn" style={{ minWidth: '180px', border: '1px solid #7c3aed' }} onClick={cropAllVideos} disabled={!!globalLoading}>
+                {globalLoading === "Cropping All Videos..." ? "⏳ Cropping..." : "✂️ Crop All Videos (-2s)"}
               </button>
               <button className="primary-action" style={{ background: '#16a34a', minWidth: '180px' }} onClick={uploadAllToYoutube} disabled={!!globalLoading}>
                 {globalLoading === "Uploading to YouTube..." ? "⏳ Uploading..." : "🚀 Upload All to YouTube"}
@@ -337,20 +377,28 @@ export default function BulkUploadPage() {
                     <td style={{ position: 'relative' }}>
                       {row.titleStatus === 'processing' && <div className="cell-loader-overlay"><span className="ai-loader-small"></span></div>}
                       <textarea
-                        className="table-input"
+                        className={`table-input ${(row.title?.length || 0) > 100 ? 'input-error' : ''}`}
                         value={row.title || ""}
                         onChange={(e) => updateRow(index, { title: e.target.value })}
                         placeholder="Pending..."
+                        maxLength={110}
                       />
+                      <div className={`char-counter ${(row.title?.length || 0) > 100 ? 'error' : ''}`}>
+                        {row.title?.length || 0} / 100
+                      </div>
                     </td>
                     <td style={{ position: 'relative' }}>
                       {row.descriptionStatus === 'processing' && <div className="cell-loader-overlay"><span className="ai-loader-small"></span></div>}
                       <textarea
-                        className="table-input"
+                        className={`table-input ${(row.description?.length || 0) > 5000 ? 'input-error' : ''}`}
                         value={row.description || ""}
                         onChange={(e) => updateRow(index, { description: e.target.value })}
                         placeholder="Pending..."
+                        maxLength={5100}
                       />
+                      <div className={`char-counter ${(row.description?.length || 0) > 5000 ? 'error' : ''}`}>
+                        {row.description?.length || 0} / 5000
+                      </div>
                     </td>
                     <td>
                       <div className={`status-badge ${row.uploadStatus}`}>
@@ -360,6 +408,17 @@ export default function BulkUploadPage() {
                     </td>
                     <td>
                       <div className="action-buttons">
+                        <button
+                          className="crop-btn"
+                          title="Crop Last 2s"
+                          onClick={() => cropRowVideo(index)}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M6.13 1L6 16a2 2 0 0 0 2 2h15" />
+                            <path d="M1 6.13L16 6a2 2 0 0 1 2 2v15" />
+                            <line x1="1" y1="1" x2="23" y2="23" />
+                          </svg>
+                        </button>
                         <button
                           className="redownload-btn"
                           title="Redownload Video"
@@ -469,10 +528,17 @@ export default function BulkUploadPage() {
         }
 
         .table-preview {
-          width: 120px;
-          height: 70px;
-          border-radius: 8px;
+          width: 290px;
+          height: 150px;
+          border-radius: 12px;
           background: #000;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+          transition: transform 0.2s ease;
+        }
+
+        .table-preview:hover {
+          transform: scale(1.05);
+          z-index: 10;
         }
 
         .table-input {
@@ -482,9 +548,33 @@ export default function BulkUploadPage() {
           border: 1px solid var(--line);
           border-radius: 6px;
           padding: 8px;
+          padding-bottom: 24px;
           font-size: 0.8rem;
           resize: vertical;
-          min-height: 60px;
+          min-height: 130px;
+          transition: border-color 0.2s;
+        }
+
+        .table-input.input-error {
+          border-color: #ef4444 !important;
+        }
+
+        .char-counter {
+          position: absolute;
+          bottom: 30px;
+          right: 18px;
+          font-size: 0.7rem;
+          color: var(--muted);
+          pointer-events: none;
+          background: rgba(0,0,0,0.5);
+          padding: 2px 6px;
+          border-radius: 4px;
+          backdrop-filter: blur(4px);
+        }
+
+        .char-counter.error {
+          color: #ef4444;
+          font-weight: bold;
         }
 
         .status-badge {
@@ -529,7 +619,7 @@ export default function BulkUploadPage() {
           align-items: center;
         }
 
-        .reload-btn, .reupload-btn, .redownload-btn {
+        .reload-btn, .reupload-btn, .redownload-btn, .crop-btn {
           background: rgba(124, 58, 237, 0.1);
           border: 1px solid rgba(124, 58, 237, 0.2);
           border-radius: 50%;
@@ -554,6 +644,12 @@ export default function BulkUploadPage() {
           border-color: rgba(59, 130, 246, 0.2);
         }
 
+        .crop-btn {
+          background: rgba(245, 158, 11, 0.1);
+          border-color: rgba(245, 158, 11, 0.2);
+          color: #f59e0b;
+        }
+
         .reload-btn:hover:not(:disabled) {
           background: rgba(124, 58, 237, 0.2);
           border-color: #7c3aed;
@@ -572,7 +668,13 @@ export default function BulkUploadPage() {
           transform: translateY(2px);
         }
 
-        .reload-btn:disabled, .reupload-btn:disabled, .redownload-btn:disabled {
+        .crop-btn:hover:not(:disabled) {
+          background: rgba(245, 158, 11, 0.2);
+          border-color: #f59e0b;
+          transform: translateY(-2px) rotate(-15deg);
+        }
+
+        .reload-btn:disabled, .reupload-btn:disabled, .redownload-btn:disabled, .crop-btn:disabled {
           opacity: 0.5;
           cursor: not-allowed;
         }
