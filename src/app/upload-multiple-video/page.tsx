@@ -371,7 +371,15 @@ export default function BulkUploadPage() {
                       ) : row.previewUrl ? (
                         <video src={row.previewUrl} className="table-preview" controls />
                       ) : (
-                        <span className="placeholder-text">No Video</span>
+                        <div className="video-placeholder">
+                          <div className="placeholder-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M23 7l-7 5 7 5V7z" />
+                              <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                            </svg>
+                          </div>
+                          <span>Not downloaded yet</span>
+                        </div>
                       )}
                     </td>
                     <td style={{ position: 'relative' }}>
@@ -678,6 +686,39 @@ export default function BulkUploadPage() {
         .reload-btn:disabled, .reupload-btn:disabled, .redownload-btn:disabled, .crop-btn:disabled {
           opacity: 0.5;
           cursor: not-allowed;
+        }
+
+        .video-placeholder {
+          width: 290px;
+          height: 130px;
+          border-radius: 12px;
+          background: rgba(255, 255, 255, 0.03);
+          border: 2px dashed rgba(255, 255, 255, 0.1);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          color: var(--muted);
+          transition: all 0.3s ease;
+          margin: 10px 0px;
+        }
+
+        .video-placeholder:hover {
+          background: rgba(255, 255, 255, 0.05);
+          border-color: rgba(124, 58, 237, 0.3);
+          color: var(--text);
+        }
+
+        .placeholder-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          background: rgba(124, 58, 237, 0.1);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #7c3aed;
         }
 
         .placeholder-text {
