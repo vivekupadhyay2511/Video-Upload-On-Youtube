@@ -366,20 +366,23 @@ export default function BulkUploadPage() {
                     <td>{row.visibilityType}</td>
                     <td>{row.scheduleDate} {row.scheduleTime}</td>
                     <td style={{ position: 'relative' }}>
-                      {row.videoStatus === 'processing' ? (
-                        <div className="cell-loader-overlay"><span className="ai-loader-small"></span></div>
-                      ) : row.previewUrl ? (
+                      {row.previewUrl ? (
                         <video src={row.previewUrl} className="table-preview" controls />
                       ) : (
-                        <div className="video-placeholder">
-                          <div className="placeholder-icon">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M23 7l-7 5 7 5V7z" />
-                              <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-                            </svg>
+                        <>
+                          {row.videoStatus === 'processing' && (
+                            <div className="cell-loader-overlay"><span className="ai-loader-small"></span></div>
+                          )}
+                          <div className="video-placeholder">
+                            <div className="placeholder-icon">
+                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M23 7l-7 5 7 5V7z" />
+                                <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                              </svg>
+                            </div>
+                            <span>Not downloaded yet</span>
                           </div>
-                          <span>Not downloaded yet</span>
-                        </div>
+                        </>
                       )}
                     </td>
                     <td style={{ position: 'relative' }}>
@@ -537,11 +540,12 @@ export default function BulkUploadPage() {
 
         .table-preview {
           width: 290px;
-          height: 150px;
+          height: 130px;
           border-radius: 12px;
           background: #000;
           box-shadow: 0 4px 12px rgba(0,0,0,0.2);
           transition: transform 0.2s ease;
+          margin: 10px 0px;
         }
 
         .table-preview:hover {
@@ -610,7 +614,8 @@ export default function BulkUploadPage() {
           justify-content: center;
           z-index: 5;
           backdrop-filter: blur(3px);
-          border-radius: 20px;
+          border-radius: 10px;
+          margin: 20px 10px;
         }
 
         .ai-loader-small {
